@@ -163,6 +163,10 @@ renderHeader();
                     <p><strong>Total Price:</strong> $<span id="totalPrice">0.00</span></p>
                     <p><strong>Parts Count:</strong> <span id="partsCount">0</span></p>
 
+                    <div id="compatibilityCheck" style="margin-top: 1rem; padding: 0.75rem; border-radius: 5px; font-weight: 500; display: none;">
+                        <span id="compatibilityStatus"></span>
+                    </div>
+
                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
                         <button class="btn" onclick="generateShareableLink(this)" style="flex: 1; min-width: 150px;">Share Link</button>
                         <?php if (isLoggedIn()): ?>
@@ -247,6 +251,34 @@ function updatePartsList() {
     });
 }
 
+function checkCompatibility() {
+    if (buildParts.length === 0) {
+        document.getElementById('compatibilityCheck').style.display = 'none';
+        return true;
+    }
+
+    const positions = buildParts.map(p => p.position);
+    const uniquePositions = new Set(positions);
+    const isCompatible = positions.length === uniquePositions.size;
+
+    const compatibilityDiv = document.getElementById('compatibilityCheck');
+    const statusSpan = document.getElementById('compatibilityStatus');
+
+    if (isCompatible) {
+        compatibilityDiv.style.display = 'block';
+        compatibilityDiv.style.backgroundColor = '#dcfce7';
+        compatibilityDiv.style.borderLeft = '4px solid #22c55e';
+        statusSpan.innerHTML = '✓ <span style="color: #16a34a;">All parts are compatible</span>';
+    } else {
+        compatibilityDiv.style.display = 'block';
+        compatibilityDiv.style.backgroundColor = '#fee2e2';
+        compatibilityDiv.style.borderLeft = '4px solid #ef4444';
+        statusSpan.innerHTML = '✗ <span style="color: #dc2626;">Duplicate part positions detected</span>';
+    }
+
+    return isCompatible;
+}
+
 function updateBuildDisplay() {
     const buildPartsDiv = document.getElementById('buildParts');
     const totalPrice = buildParts.reduce((sum, part) => sum + parseFloat(part.price), 0);
@@ -263,6 +295,7 @@ function updateBuildDisplay() {
 
     document.getElementById('totalPrice').textContent = totalPrice.toFixed(2);
     document.getElementById('partsCount').textContent = buildParts.length;
+    checkCompatibility();
 }
 
 function filterParts() {
