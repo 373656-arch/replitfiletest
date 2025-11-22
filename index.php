@@ -134,11 +134,11 @@ renderHeader();
                     }
                     foreach ($categories as $category => $category_parts): ?>
                         <div class="parts-category">
-                            <button class="category-header" onclick="toggleCategory(this)" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 1rem; background: var(--bg-primary); border: 1px solid var(--bg-secondary); border-radius: 5px; cursor: pointer; font-weight: 600; color: var(--text-primary); border: none;">
+                            <button class="category-header" onclick="toggleCategory(this)" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 1rem; background: var(--bg-primary); border: 1px solid var(--bg-secondary); border-radius: 5px; cursor: pointer; font-weight: 600; color: var(--text-primary); border: none; transition: all 0.3s ease;">
                                 <span><?php echo htmlspecialchars($category); ?> (<?php echo count($category_parts); ?>)</span>
-                                <span style="font-size: 1.2rem;">▼</span>
+                                <span style="font-size: 1.2rem; display: inline-block; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);">▼</span>
                             </button>
-                            <div class="category-parts" style="display: none; padding: 0.5rem 0;">
+                            <div class="category-parts" style="max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease-in-out, padding 0.4s ease-in-out; padding: 0;">
                                 <?php foreach ($category_parts as $part): ?>
                                     <div class="part-card pcpartpicker-style" 
                                          data-part-id="<?php echo $part['part_id']; ?>"
@@ -234,12 +234,18 @@ let buildParts = [];
 function toggleCategory(button) {
     const partsDiv = button.nextElementSibling;
     const arrow = button.querySelector('span:last-child');
-    if (partsDiv.style.display === 'none') {
-        partsDiv.style.display = 'block';
-        arrow.style.transform = 'rotate(0deg)';
-    } else {
-        partsDiv.style.display = 'none';
+    const isOpen = partsDiv.style.maxHeight !== 'none' && partsDiv.style.maxHeight !== '0px';
+    
+    if (isOpen) {
+        partsDiv.style.maxHeight = '0';
+        partsDiv.style.opacity = '0';
+        partsDiv.style.padding = '0';
         arrow.style.transform = 'rotate(-90deg)';
+    } else {
+        partsDiv.style.maxHeight = '2000px';
+        partsDiv.style.opacity = '1';
+        partsDiv.style.padding = '0.5rem 0';
+        arrow.style.transform = 'rotate(0deg)';
     }
 }
 
