@@ -466,7 +466,7 @@ function showReplyForm(commentId) {
 function toggleReplies(commentId) {
     const container = document.getElementById('replies-container-' + commentId);
     const button = event.target.closest('.toggle-replies');
-    if (!container) return;
+    if (!container || !button) return;
     
     if (container.style.display === 'none') {
         container.style.display = 'block';

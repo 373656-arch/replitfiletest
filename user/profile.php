@@ -114,7 +114,11 @@ renderHeader();
                 <?php endwhile; ?>
             </div>
         <?php else: ?>
-            <p>You haven't created any builds yet. <a href="/index.php" style="color: var(--accent-2);">Create your first build!</a></p>
+            <div style="text-align: center; padding: 2rem; background: var(--bg-primary); border-radius: 5px;">
+                <p style="font-size: 1.1rem; color: var(--text-secondary);">Add your first part to start building</p>
+                <p style="margin-top: 0.5rem; color: var(--text-secondary); opacity: 0.8;">Create a custom car build by adding parts and components</p>
+                <a href="/index.php" style="color: var(--accent-2); margin-top: 1rem; display: inline-block; text-decoration: underline;">Start Building →</a>
+            </div>
         <?php endif; ?>
     </div>
 
