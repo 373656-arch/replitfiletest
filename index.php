@@ -311,10 +311,25 @@ function filterParts() {
     });
 }
 
-function filterByCategory(category) {
+function toggleCategoryDropdown() {
+    const dropdown = document.getElementById('categoryDropdown');
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    document.addEventListener('click', closeDropdownOnClickOutside);
+}
+
+function closeDropdownOnClickOutside(event) {
+    const dropdown = document.getElementById('categoryDropdown');
+    const categoryDiv = document.querySelector('.category-dropdown');
+    if (!categoryDiv.contains(event.target)) {
+        dropdown.style.display = 'none';
+        document.removeEventListener('click', closeDropdownOnClickOutside);
+    }
+}
+
+function selectCategory(category, label) {
     currentCategory = category;
-    document.querySelectorAll('.filter-tabs button').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
+    document.getElementById('categoryBtn').textContent = 'Filter: ' + label + ' ▼';
+    document.getElementById('categoryDropdown').style.display = 'none';
     filterParts();
 }
 
