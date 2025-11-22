@@ -120,9 +120,9 @@ renderHeader();
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     <input type="text" id="searchParts" placeholder="Search parts..." onkeyup="filterParts()" style="flex: 1;">
                     <div class="category-dropdown">
-                        <button id="categoryBtn" class="btn" onclick="toggleCategoryDropdown()">Filter: All Categories ▼</button>
+                        <button id="categoryBtn" class="filter-icon-btn" onclick="toggleCategoryDropdown()" title="Filter by category">☰</button>
                         <div id="categoryDropdown" class="dropdown-menu" style="display: none;">
-                            <div class="dropdown-item" onclick="selectCategory('all', 'All Categories')">All Categories</div>
+                            <div class="dropdown-item" onclick="selectCategory('all', 'All')">All Categories</div>
                             <div class="dropdown-item" onclick="selectCategory('Exhaust', 'Exhaust')">Exhaust</div>
                             <div class="dropdown-item" onclick="selectCategory('Intake', 'Intake')">Intake</div>
                             <div class="dropdown-item" onclick="selectCategory('Suspension', 'Suspension')">Suspension</div>
@@ -328,7 +328,6 @@ function closeDropdownOnClickOutside(event) {
 
 function selectCategory(category, label) {
     currentCategory = category;
-    document.getElementById('categoryBtn').textContent = 'Filter: ' + label + ' ▼';
     document.getElementById('categoryDropdown').style.display = 'none';
     filterParts();
 }
