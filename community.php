@@ -472,10 +472,10 @@ function toggleReplies(commentId, button) {
     
     if (container.style.display === 'none') {
         container.style.display = 'block';
-        button.textContent = 'Hide Replies (' + replyCountText + ')';
+        button.innerHTML = 'Hide Replies (<span id="reply-count-' + commentId + '">' + replyCountText + '</span>)';
     } else {
         container.style.display = 'none';
-        button.textContent = 'Show Replies (' + replyCountText + ')';
+        button.innerHTML = 'Show Replies (<span id="reply-count-' + commentId + '">' + replyCountText + '</span>)';
     }
 }
 </script>

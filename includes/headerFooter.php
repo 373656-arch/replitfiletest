@@ -33,27 +33,39 @@ function renderHeader() {
             </div>
         </div>
         <header>
-            <a href="/index.php" style="display: flex; align-items: center; text-decoration: none;">
-                <img src="/theme/logo.png" alt="ModMyCar" style="height: 40px; width: auto;">
-            </a>
-            <nav>
-                <?php if ($currentUser): ?>
-                    <a href="/index.php" title="Home"><i class="fas fa-home"></i></a>
-                    <a href="/community.php" title="Community"><i class="fas fa-users"></i></a>
-                    <?php if ($isUserAdmin): ?>
-                        <a href="/admin.php" title="Admin"><i class="fas fa-cog"></i></a>
-                    <?php endif; ?>
-                    <a href="/user/profile.php" title="Profile"><i class="fas fa-user"></i></a>
-                    <a href="/user/settings.php" title="Settings"><i class="fas fa-sliders-h"></i></a>
-                    <a href="/user/logout.php" title="Logout"><i class="fas fa-sign-out-alt"></i></a>
-                <?php else: ?>
-                    <a href="/index.php" title="Home"><i class="fas fa-home"></i></a>
-                    <a href="/community.php" title="Community"><i class="fas fa-users"></i></a>
-                    <a href="/user/login.php" title="Sign In"><i class="fas fa-sign-in-alt"></i></a>
-                    <a href="/user/register.php" title="Register"><i class="fas fa-user-plus"></i></a>
-                <?php endif; ?>
-            </nav>
+            <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
+                <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle navigation">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <a href="/index.php" style="display: flex; align-items: center; text-decoration: none;">
+                    <img src="/theme/logo.png" alt="ModMyCar" style="height: 40px; width: auto;">
+                </a>
+            </div>
         </header>
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-content">
+                <button id="sidebarClose" class="sidebar-close" aria-label="Close navigation">
+                    <i class="fas fa-times"></i>
+                </button>
+                <nav class="sidebar-nav">
+                    <?php if ($currentUser): ?>
+                        <a href="/index.php" class="sidebar-link"><i class="fas fa-home"></i> Home</a>
+                        <a href="/community.php" class="sidebar-link"><i class="fas fa-users"></i> Community</a>
+                        <?php if ($isUserAdmin): ?>
+                            <a href="/admin.php" class="sidebar-link"><i class="fas fa-cog"></i> Admin</a>
+                        <?php endif; ?>
+                        <a href="/user/profile.php" class="sidebar-link"><i class="fas fa-user"></i> Profile</a>
+                        <a href="/user/settings.php" class="sidebar-link"><i class="fas fa-sliders-h"></i> Settings</a>
+                        <a href="/user/logout.php" class="sidebar-link"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    <?php else: ?>
+                        <a href="/index.php" class="sidebar-link"><i class="fas fa-home"></i> Home</a>
+                        <a href="/community.php" class="sidebar-link"><i class="fas fa-users"></i> Community</a>
+                        <a href="/user/login.php" class="sidebar-link"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+                        <a href="/user/register.php" class="sidebar-link"><i class="fas fa-user-plus"></i> Register</a>
+                    <?php endif; ?>
+                </nav>
+            </div>
+        </aside>
         <main>
     <?php
 }
@@ -77,12 +89,30 @@ function renderFooter() {
             document.documentElement.setAttribute('data-theme', savedTheme);
 
             const loader = document.querySelector('.page-loader');
-            const navLinks = document.querySelectorAll('header nav a');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebarClose = document.getElementById('sidebarClose');
+            const navLinks = document.querySelectorAll('.sidebar-nav a');
+
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('active');
+            });
+
+            sidebarClose.addEventListener('click', function() {
+                sidebar.classList.remove('active');
+            });
+
+            sidebar.addEventListener('click', function(e) {
+                if (e.target === sidebar) {
+                    sidebar.classList.remove('active');
+                }
+            });
 
             navLinks.forEach(link => {
                 link.addEventListener('click', function(e) {
                     if (this.href && !this.target) {
                         e.preventDefault();
+                        sidebar.classList.remove('active');
                         loader.classList.add('active');
                         document.body.classList.add('fade-out');
                         setTimeout(() => {
