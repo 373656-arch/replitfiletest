@@ -9,6 +9,15 @@ if (!empty($_SESSION['prefill_build'])) {
     unset($_SESSION['prefill_build']);
 }
 
+// Prefill logic: if user arrived from a shared link, decode the build data
+if (!empty($_GET['share_build'])) {
+    $decoded_build = json_decode(base64_decode($_GET['share_build'], true), true);
+    if ($decoded_build && !empty($decoded_build['car_id'])) {
+        $prefill_build = $decoded_build;
+        $selected_car_id = $decoded_build['car_id'];
+    }
+}
+
 // Prepare JS variables for client-side use
 $prefill_parts_json = $prefill_build ? json_encode($prefill_build['parts'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : 'null';
 $prefill_total_price = $prefill_build ? number_format((float)$prefill_build['total_price'], 2, '.', '') : '0.00';
@@ -154,11 +163,14 @@ renderHeader();
                     <p><strong>Total Price:</strong> $<span id="totalPrice">0.00</span></p>
                     <p><strong>Parts Count:</strong> <span id="partsCount">0</span></p>
 
-                    <?php if (isLoggedIn()): ?>
-                        <button class="btn" onclick="showSaveModal()" style="margin-top: 1rem;">Save Build</button>
-                    <?php else: ?>
-                        <a href="/user/login.php" class="btn" style="margin-top: 1rem;">Login to Save Build</a>
-                    <?php endif; ?>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+                        <button class="btn" onclick="generateShareableLink()" style="flex: 1; min-width: 150px;">Share Link</button>
+                        <?php if (isLoggedIn()): ?>
+                            <button class="btn" onclick="showSaveModal()" style="flex: 1; min-width: 150px;">Save Build</button>
+                        <?php else: ?>
+                            <a href="/user/login.php" class="btn" style="flex: 1; min-width: 150px; text-align: center;">Login to Save</a>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -280,6 +292,39 @@ function prepareBuildData() {
     } catch(e) { console.error('Prefill error:', e); }
 })();
 <?php endif; ?>
+
+function generateShareableLink() {
+    if (!buildParts.length) {
+        alert('Please add at least one part to your build before sharing.');
+        return;
+    }
+
+    const buildData = {
+        car_id: <?php echo (int)$selected_car_id; ?>,
+        parts: buildParts,
+        total_price: buildParts.reduce((sum, part) => sum + parseFloat(part.price), 0).toFixed(2),
+        build_title: 'Shared Build'
+    };
+
+    const encodedBuild = btoa(JSON.stringify(buildData));
+    const shareLink = window.location.origin + window.location.pathname + '?share_build=' + encodedBuild;
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(shareLink).then(() => {
+        // Show feedback
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        button.style.background = '#10b981';
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.style.background = '';
+        }, 2000);
+    }).catch(err => {
+        alert('Failed to copy link. Please try again.');
+        console.error('Clipboard error:', err);
+    });
+}
 </script>
 
 <?php renderFooter(); ?>
