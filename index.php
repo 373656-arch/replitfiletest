@@ -32,7 +32,6 @@ if ($selected_car_id) {
 
 $parts = [];
 $selected_car = null;
-$similar_builds = [];
 if ($selected_car_id) {
     $stmt = $conn->prepare("SELECT * FROM cars WHERE car_id = ?");
     $stmt->bind_param("i", $selected_car_id);
@@ -50,8 +49,6 @@ if ($selected_car_id) {
     $stmt->bind_param("i", $selected_car_id);
     $stmt->execute();
     $parts = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    
-    $similar_builds = getSimilarBuilds($selected_car_id);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
@@ -174,20 +171,10 @@ renderHeader();
                         <span id="compatibilityStatus"></span>
                     </div>
 
-                    <?php if (!empty($similar_builds)): ?>
-                        <div style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-primary); border-radius: 5px; border-left: 4px solid var(--accent-1);">
-                            <h5 style="margin-top: 0; margin-bottom: 0.75rem;">Similar Builds</h5>
-                            <?php foreach ($similar_builds as $build): ?>
-                                <div style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 4px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-                                    <div>
-                                        <p style="margin: 0; font-weight: 500; color: var(--text-primary);"><?php echo htmlspecialchars($build['build_title']); ?></p>
-                                        <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">by <?php echo htmlspecialchars($build['username']); ?> • <?php echo $build['parts_count']; ?> parts • $<?php echo number_format($build['total_price'], 2); ?></p>
-                                    </div>
-                                    <a href="/user/profile.php?view_build=<?php echo $build['build_id']; ?>" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem; white-space: nowrap; margin-left: 1rem;">View</a>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
+                    <div id="similarBuildsContainer" style="display: none; margin-top: 1.5rem; padding: 1rem; background: var(--bg-primary); border-radius: 5px; border-left: 4px solid var(--accent-1);">
+                        <h5 style="margin-top: 0; margin-bottom: 0.75rem;">Similar Builds</h5>
+                        <div id="similarBuildsList"></div>
+                    </div>
 
                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
                         <button class="btn" onclick="generateShareableLink(this)" style="flex: 1; min-width: 150px;">Share Link</button>
@@ -318,6 +305,47 @@ function updateBuildDisplay() {
     document.getElementById('totalPrice').textContent = totalPrice.toFixed(2);
     document.getElementById('partsCount').textContent = buildParts.length;
     checkCompatibility();
+    fetchSimilarBuilds();
+}
+
+function fetchSimilarBuilds() {
+    if (buildParts.length === 0) {
+        document.getElementById('similarBuildsContainer').style.display = 'none';
+        return;
+    }
+
+    const partIds = buildParts.map(p => p.part_id);
+    const carId = <?php echo (int)$selected_car_id; ?>;
+
+    const formData = new FormData();
+    formData.append('car_id', carId);
+    partIds.forEach(id => formData.append('part_ids[]', id));
+
+    fetch('/api_similar_builds.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        const container = document.getElementById('similarBuildsContainer');
+        const list = document.getElementById('similarBuildsList');
+
+        if (data.builds && data.builds.length > 0) {
+            list.innerHTML = data.builds.map(build => `
+                <div style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 4px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <p style="margin: 0; font-weight: 500; color: var(--text-primary);">${build.build_title}</p>
+                        <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">by ${build.username} • ${build.parts_count} parts • $${parseFloat(build.total_price).toFixed(2)}</p>
+                    </div>
+                    <a href="/user/profile.php?view_build=${build.build_id}" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem; white-space: nowrap; margin-left: 1rem;">View</a>
+                </div>
+            `).join('');
+            container.style.display = 'block';
+        } else {
+            container.style.display = 'none';
+        }
+    })
+    .catch(err => console.error('Error fetching similar builds:', err));
 }
 
 function filterParts() {
