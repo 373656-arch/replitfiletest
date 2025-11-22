@@ -26,7 +26,9 @@ function renderHeader() {
     </head>
     <body>
         <header>
-            <h1>ModMyCar</h1>
+            <a href="/index.php" style="display: flex; align-items: center; text-decoration: none;">
+                <img src="/theme/logo.png" alt="ModMyCar" style="height: 40px; width: auto;">
+            </a>
             <nav>
                 <?php if ($currentUser): ?>
                     <a href="/index.php">Home</a>
