@@ -25,6 +25,12 @@ function renderHeader() {
         <link rel="stylesheet" href="/theme/style.css">
     </head>
     <body>
+        <div class="page-loader">
+            <div class="loader-content">
+                <div class="loader-spinner"></div>
+                <p class="loader-text">Loading</p>
+            </div>
+        </div>
         <header>
             <a href="/index.php" style="display: flex; align-items: center; text-decoration: none;">
                 <img src="/theme/logo.png" alt="ModMyCar" style="height: 40px; width: auto;">
@@ -68,6 +74,38 @@ function renderFooter() {
 
             const savedTheme = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', savedTheme);
+
+            const loader = document.querySelector('.page-loader');
+            const navLinks = document.querySelectorAll('header nav a');
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    if (this.href && !this.target) {
+                        e.preventDefault();
+                        loader.classList.add('active');
+                        document.body.classList.add('fade-out');
+                        setTimeout(() => {
+                            window.location.href = this.href;
+                        }, 300);
+                    }
+                });
+            });
+
+            const logoLink = document.querySelector('header a[href="/index.php"]');
+            if (logoLink) {
+                logoLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    loader.classList.add('active');
+                    document.body.classList.add('fade-out');
+                    setTimeout(() => {
+                        window.location.href = this.href;
+                    }, 300);
+                });
+            }
+
+            window.addEventListener('beforeunload', function() {
+                loader.classList.add('active');
+            });
         </script>
     </body>
     </html>

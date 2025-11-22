@@ -465,14 +465,15 @@ function showReplyForm(commentId) {
 
 function toggleReplies(commentId, button) {
     const container = document.getElementById('replies-container-' + commentId);
-    if (!container || !button) return;
+    const replyCount = document.getElementById('reply-count-' + commentId);
+    if (!container || !button || !replyCount) return;
     
     if (container.style.display === 'none') {
         container.style.display = 'block';
-        button.textContent = 'Hide Replies (' + document.getElementById('reply-count-' + commentId).textContent + ')';
+        button.textContent = 'Hide Replies (' + replyCount.textContent + ')';
     } else {
         container.style.display = 'none';
-        button.textContent = 'Show Replies (' + document.getElementById('reply-count-' + commentId).textContent + ')';
+        button.textContent = 'Show Replies (' + replyCount.textContent + ')';
     }
 }
 </script>
