@@ -420,7 +420,14 @@ renderHeader();
                     $stmt2->bind_param("i", $comment['comment_id']);
                     $stmt2->execute();
                     $replies = $stmt2->get_result();
+                    $reply_count = $replies->num_rows;
+                    $replies = $stmt2->get_result();
                     ?>
+
+                    <?php if ($reply_count > 0): ?>
+                        <button onclick="toggleReplies(<?php echo (int)$comment['comment_id']; ?>)" class="btn btn-secondary toggle-replies" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.9rem;">Show Replies (<span id="reply-count-<?php echo (int)$comment['comment_id']; ?>"><?php echo $reply_count; ?></span>)</button>
+                        <div id="replies-container-<?php echo (int)$comment['comment_id']; ?>" class="replies-container" style="display: none;">
+                    <?php endif; ?>
 
                     <?php while ($reply = $replies->fetch_assoc()): ?>
                         <div class="comment reply">
