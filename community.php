@@ -466,14 +466,16 @@ function showReplyForm(commentId) {
 function toggleReplies(commentId, button) {
     const container = document.getElementById('replies-container-' + commentId);
     const replyCount = document.getElementById('reply-count-' + commentId);
-    if (!container || !button || !replyCount) return;
+    if (!container || !button) return;
+    
+    const replyCountText = replyCount ? replyCount.textContent : '0';
     
     if (container.style.display === 'none') {
         container.style.display = 'block';
-        button.textContent = 'Hide Replies (' + replyCount.textContent + ')';
+        button.textContent = 'Hide Replies (' + replyCountText + ')';
     } else {
         container.style.display = 'none';
-        button.textContent = 'Show Replies (' + replyCount.textContent + ')';
+        button.textContent = 'Show Replies (' + replyCountText + ')';
     }
 }
 </script>
