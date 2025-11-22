@@ -39,4 +39,21 @@ function getUserData($user_id) {
     $result = $stmt->get_result();
     return $result->fetch_assoc();
 }
+
+function getSimilarBuilds($car_id, $limit = 5) {
+    global $conn;
+    $stmt = $conn->prepare("
+        SELECT b.build_id, b.build_title, b.total_price, u.username, 
+               (SELECT COUNT(*) FROM build_parts WHERE build_id = b.build_id) as parts_count
+        FROM builds b
+        JOIN users u ON b.user_id = u.uid
+        WHERE b.car_id = ? AND b.is_community_shared = 1
+        ORDER BY b.build_id DESC
+        LIMIT ?
+    ");
+    $stmt->bind_param("ii", $car_id, $limit);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return $result->fetch_all(MYSQLI_ASSOC);
+}
 ?>

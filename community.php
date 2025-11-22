@@ -466,9 +466,9 @@ function showReplyForm(commentId) {
 function toggleReplies(commentId, button) {
     const container = document.getElementById('replies-container-' + commentId);
     const replyCount = document.getElementById('reply-count-' + commentId);
-    if (!container || !button) return;
+    if (!container || !button || !replyCount) return;
     
-    const replyCountText = replyCount ? replyCount.textContent : '0';
+    const replyCountText = replyCount.textContent || '0';
     
     if (container.style.display === 'none') {
         container.style.display = 'block';

@@ -32,6 +32,7 @@ if ($selected_car_id) {
 
 $parts = [];
 $selected_car = null;
+$similar_builds = [];
 if ($selected_car_id) {
     $stmt = $conn->prepare("SELECT * FROM cars WHERE car_id = ?");
     $stmt->bind_param("i", $selected_car_id);
@@ -49,6 +50,8 @@ if ($selected_car_id) {
     $stmt->bind_param("i", $selected_car_id);
     $stmt->execute();
     $parts = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    
+    $similar_builds = getSimilarBuilds($selected_car_id);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
@@ -170,6 +173,21 @@ renderHeader();
                     <div id="compatibilityCheck" style="margin-top: 1rem; padding: 0.75rem; border-radius: 5px; font-weight: 500; display: none;">
                         <span id="compatibilityStatus"></span>
                     </div>
+
+                    <?php if (!empty($similar_builds)): ?>
+                        <div style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-primary); border-radius: 5px; border-left: 4px solid var(--accent-1);">
+                            <h5 style="margin-top: 0; margin-bottom: 0.75rem;">Similar Builds</h5>
+                            <?php foreach ($similar_builds as $build): ?>
+                                <div style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 4px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <p style="margin: 0; font-weight: 500; color: var(--text-primary);"><?php echo htmlspecialchars($build['build_title']); ?></p>
+                                        <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">by <?php echo htmlspecialchars($build['username']); ?> • <?php echo $build['parts_count']; ?> parts • $<?php echo number_format($build['total_price'], 2); ?></p>
+                                    </div>
+                                    <a href="/user/profile.php?view_build=<?php echo $build['build_id']; ?>" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem; white-space: nowrap; margin-left: 1rem;">View</a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
 
                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
                         <button class="btn" onclick="generateShareableLink(this)" style="flex: 1; min-width: 150px;">Share Link</button>
