@@ -35,6 +35,7 @@ function renderHeader() {
                         <a href="/admin.php">Admin</a>
                     <?php endif; ?>
                     <a href="/user/profile.php">Profile</a>
+                    <a href="/user/settings.php">Settings</a>
                     <a href="/user/logout.php">Logout</a>
                 <?php else: ?>
                     <a href="/index.php">Home</a>
@@ -42,7 +43,6 @@ function renderHeader() {
                     <a href="/user/login.php">Sign In</a>
                     <a href="/user/register.php">Register</a>
                 <?php endif; ?>
-                <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
             </nav>
         </header>
         <main>
