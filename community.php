@@ -465,25 +465,17 @@ function showReplyForm(commentId) {
 
 function toggleReplies(commentId, button) {
     const container = document.getElementById('replies-container-' + commentId);
-    
-    // If no replies container exists, do nothing
-    if (!container) return;
-    
-    // Safely get the reply count text
     const replyCount = document.getElementById('reply-count-' + commentId);
-    const replyCountText = (replyCount && replyCount.textContent) ? replyCount.textContent : '0';
+    if (!container || !button || !replyCount) return;
     
-    // Toggle container visibility
+    const replyCountText = replyCount.textContent || '0';
+    
     if (container.style.display === 'none') {
         container.style.display = 'block';
-        if (button) {
-            button.textContent = 'Hide Replies (' + replyCountText + ')';
-        }
+        button.textContent = 'Hide Replies (' + replyCountText + ')';
     } else {
         container.style.display = 'none';
-        if (button) {
-            button.textContent = 'Show Replies (' + replyCountText + ')';
-        }
+        button.textContent = 'Show Replies (' + replyCountText + ')';
     }
 }
 </script>

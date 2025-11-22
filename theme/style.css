@@ -50,7 +50,6 @@ header {
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 header h1 {
@@ -111,38 +110,8 @@ header nav a:hover {
 
 main {
     flex: 1;
-    padding: 0;
+    padding: 2rem;
     width: 100%;
-}
-
-.hero-section {
-    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
-    padding: 5rem 2rem;
-    text-align: center;
-    border-bottom: 2px solid var(--border-color);
-}
-
-.hero-content {
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.hero-content h1 {
-    font-size: 2.8rem;
-    font-weight: 800;
-    margin-bottom: 1rem;
-    background: linear-gradient(135deg, var(--accent-1) 0%, var(--accent-2) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: -1px;
-}
-
-.hero-content p {
-    font-size: 1.2rem;
-    color: var(--text-secondary);
-    margin-bottom: 0;
-    line-height: 1.6;
 }
 
 footer {
@@ -157,22 +126,15 @@ footer {
 .container {
     width: 100%;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 0 2rem;
 }
 
 .card {
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 2rem;
+    padding: 1.5rem;
     margin-bottom: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
-}
-
-.card:hover {
-    border-color: var(--accent-1);
-    box-shadow: 0 8px 30px rgba(255, 179, 71, 0.1);
 }
 
 .btn {
@@ -184,16 +146,14 @@ footer {
     cursor: pointer;
     font-size: 0.95rem;
     font-weight: 600;
-    transition: all 0.3s ease;
+    transition: all 0.2s;
     text-decoration: none;
     display: inline-block;
-    box-shadow: 0 4px 15px rgba(255, 179, 71, 0.3);
 }
 
 .btn:hover {
     background-color: var(--accent-3);
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(255, 179, 71, 0.4);
+    transform: translateY(-2px);
 }
 
 .btn-secondary {
@@ -256,9 +216,9 @@ label {
 
 .build-area {
     display: grid;
-    grid-template-columns: 380px 1fr;
-    gap: 3rem;
-    margin-top: 2rem;
+    grid-template-columns: 400px 1fr;
+    gap: 4rem;
+    margin-top: 3rem;
     margin-bottom: 3rem;
     width: 100%;
 }
@@ -266,11 +226,10 @@ label {
 .parts-panel {
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 2rem;
+    border-radius: 8px;
+    padding: 2.5rem;
     max-height: 80vh;
     overflow-y: auto;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .parts-panel h3 {
@@ -285,11 +244,10 @@ label {
 .build-canvas {
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 2.5rem;
     min-height: 60vh;
     position: relative;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .build-canvas h3 {
@@ -300,23 +258,21 @@ label {
 .part-item {
     background-color: var(--bg-primary);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1rem;
+    border-radius: 5px;
+    padding: 0.75rem;
     margin-bottom: 0.75rem;
     cursor: grab;
-    transition: all 0.2s ease;
+    transition: transform 0.2s;
     display: grid;
     grid-template-columns: 60px 1fr auto auto;
     gap: 1rem;
     align-items: center;
     min-height: 80px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .part-item:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
     border-color: var(--accent-1);
-    box-shadow: 0 4px 15px rgba(255, 179, 71, 0.2);
 }
 
 .part-item img {
@@ -378,12 +334,10 @@ label {
 }
 
 .build-summary {
-    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    background-color: var(--bg-primary);
     padding: 2rem;
-    border-radius: 12px;
+    border-radius: 8px;
     margin-top: 2rem;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .build-summary h4 {
@@ -457,7 +411,7 @@ label {
     min-width: 180px;
     z-index: 1000;
     margin-top: 0.5rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .dropdown-item {
@@ -712,11 +666,10 @@ table tr:hover {
 .modal-content {
     background-color: var(--bg-secondary);
     padding: 2rem;
-    border-radius: 12px;
+    border-radius: 8px;
     max-width: 500px;
     width: 90%;
     border: 1px solid var(--border-color);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
 }
 
 .close {
@@ -826,18 +779,6 @@ body.fade-out {
     main {
         padding: 1rem;
         max-width: 100%;
-    }
-
-    .hero-section {
-        padding: 3rem 1rem;
-    }
-
-    .hero-content h1 {
-        font-size: 2rem;
-    }
-
-    .hero-content p {
-        font-size: 1rem;
     }
 }
 

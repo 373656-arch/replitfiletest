@@ -93,23 +93,14 @@ require_once 'includes/headerFooter.php';
 renderHeader();
 ?>
 
-<div class="hero-section">
-    <div class="hero-content">
-        <h1>Design Your Perfect Build</h1>
-        <p>Choose from thousands of premium parts and create custom car configurations. Share your builds with the community.</p>
-        <div style="display: flex; gap: 1rem; margin-top: 2rem; flex-wrap: wrap;">
-            <a href="#builder" class="btn" style="padding: 0.8rem 2rem; font-size: 1.05rem;">Start Building</a>
-            <a href="/community.php" class="btn btn-secondary" style="padding: 0.8rem 2rem; font-size: 1.05rem;">View Community Builds</a>
-        </div>
-    </div>
-</div>
-
-<div class="container" id="builder">
+<div class="container">
+    <h2>Build Your Dream Car</h2>
+    
     <?php if (isset($error)): ?>
         <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
     <?php endif; ?>
 
-    <div class="card" style="margin-top: 3rem;">
+    <div class="card">
         <h3>Select Your Car</h3>
         <form method="GET">
             <select name="car_id" onchange="this.form.submit()" required>
