@@ -79,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
                 $stmt->execute();
             }
 
+            $_SESSION['build_saved_success'] = true;
             header('Location: /user/profile.php');
             exit;
         } else {

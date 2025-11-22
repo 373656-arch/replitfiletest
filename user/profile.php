@@ -55,7 +55,14 @@ $saved_builds_result = $saved_builds->get_result();
 $pageTitle = htmlspecialchars($user['username']);
 require_once '../includes/headerFooter.php';
 renderHeader();
+
+$show_confetti = isset($_SESSION['build_saved_success']) && $_SESSION['build_saved_success'];
+if ($show_confetti) {
+    unset($_SESSION['build_saved_success']);
+}
 ?>
+
+<canvas id="confetti-canvas"></canvas>
 
 <div class="container">
     <?php if (isset($_GET['deleted']) && $_GET['deleted'] === 'success'): ?>
@@ -164,6 +171,95 @@ function showTab(tabId) {
     document.getElementById(tabId).style.display = 'block';
     event.target.classList.add('active');
 }
+
+<?php if ($show_confetti): ?>
+// Confetti animation
+const canvas = document.getElementById('confetti-canvas');
+const ctx = canvas.getContext('2d');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const confetti = [];
+
+class Confetto {
+    constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height - canvas.height;
+        this.vx = (Math.random() - 0.5) * 8;
+        this.vy = Math.random() * 3 + 4;
+        this.gravity = 0.1;
+        this.rotation = Math.random() * Math.PI * 2;
+        this.rotationSpeed = (Math.random() - 0.5) * 0.2;
+        this.size = Math.random() * 6 + 4;
+        this.color = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#FFD93D', '#FF6B9D'][Math.floor(Math.random() * 7)];
+        this.opacity = 1;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += this.gravity;
+        this.rotation += this.rotationSpeed;
+        this.opacity -= 0.01;
+    }
+
+    draw() {
+        ctx.save();
+        ctx.globalAlpha = this.opacity;
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.fillStyle = this.color;
+        ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+        ctx.restore();
+    }
+}
+
+function createConfetti() {
+    for (let i = 0; i < 100; i++) {
+        confetti.push(new Confetto());
+    }
+}
+
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    for (let i = confetti.length - 1; i >= 0; i--) {
+        confetti[i].update();
+        confetti[i].draw();
+        
+        if (confetti[i].opacity <= 0 || confetti[i].y > canvas.height) {
+            confetti.splice(i, 1);
+        }
+    }
+
+    if (confetti.length > 0) {
+        requestAnimationFrame(animate);
+    } else {
+        canvas.style.display = 'none';
+    }
+}
+
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+
+createConfetti();
+animate();
+<?php endif; ?>
 </script>
+
+<style>
+#confetti-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+}
+</style>
 
 <?php renderFooter(); ?>

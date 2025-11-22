@@ -425,7 +425,7 @@ renderHeader();
                     ?>
 
                     <?php if ($reply_count > 0): ?>
-                        <button onclick="toggleReplies(<?php echo (int)$comment['comment_id']; ?>)" class="btn btn-secondary toggle-replies" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.9rem;">Show Replies (<span id="reply-count-<?php echo (int)$comment['comment_id']; ?>"><?php echo $reply_count; ?></span>)</button>
+                        <button onclick="toggleReplies(<?php echo (int)$comment['comment_id']; ?>, this)" class="btn btn-secondary toggle-replies" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.9rem;">Show Replies (<span id="reply-count-<?php echo (int)$comment['comment_id']; ?>"><?php echo $reply_count; ?></span>)</button>
                         <div id="replies-container-<?php echo (int)$comment['comment_id']; ?>" class="replies-container" style="display: none;">
                     <?php endif; ?>
 
@@ -463,9 +463,8 @@ function showReplyForm(commentId) {
     form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
 
-function toggleReplies(commentId) {
+function toggleReplies(commentId, button) {
     const container = document.getElementById('replies-container-' + commentId);
-    const button = event.target.closest('.toggle-replies');
     if (!container || !button) return;
     
     if (container.style.display === 'none') {
