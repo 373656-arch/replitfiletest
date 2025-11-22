@@ -117,16 +117,20 @@ renderHeader();
         <div class="build-area">
             <div class="parts-panel">
                 <h3>Available Parts</h3>
-                <input type="text" id="searchParts" placeholder="Search parts..." onkeyup="filterParts()">
-
-                <div class="filter-tabs">
-                    <button class="active" onclick="filterByCategory('all')">All</button>
-                    <button onclick="filterByCategory('Exhaust')">Exhaust</button>
-                    <button onclick="filterByCategory('Intake')">Intake</button>
-                    <button onclick="filterByCategory('Suspension')">Suspension</button>
-                    <button onclick="filterByCategory('Wheels')">Wheels</button>
-                    <button onclick="filterByCategory('Tires')">Tires</button>
-                    <button onclick="filterByCategory('Brakes')">Brakes</button>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <input type="text" id="searchParts" placeholder="Search parts..." onkeyup="filterParts()" style="flex: 1;">
+                    <div class="category-dropdown">
+                        <button id="categoryBtn" class="btn" onclick="toggleCategoryDropdown()">Filter: All Categories ▼</button>
+                        <div id="categoryDropdown" class="dropdown-menu" style="display: none;">
+                            <div class="dropdown-item" onclick="selectCategory('all', 'All Categories')">All Categories</div>
+                            <div class="dropdown-item" onclick="selectCategory('Exhaust', 'Exhaust')">Exhaust</div>
+                            <div class="dropdown-item" onclick="selectCategory('Intake', 'Intake')">Intake</div>
+                            <div class="dropdown-item" onclick="selectCategory('Suspension', 'Suspension')">Suspension</div>
+                            <div class="dropdown-item" onclick="selectCategory('Wheels', 'Wheels')">Wheels</div>
+                            <div class="dropdown-item" onclick="selectCategory('Tires', 'Tires')">Tires</div>
+                            <div class="dropdown-item" onclick="selectCategory('Brakes', 'Brakes')">Brakes</div>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="partsList">
