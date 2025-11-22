@@ -230,9 +230,22 @@ function drop(event) {
 
     buildParts.push({ part_id: partId, name: partName, price: partPrice, position: position });
     updateBuildDisplay();
+    updatePartsList();
 }
 
-function removePart(index) { buildParts.splice(index, 1); updateBuildDisplay(); }
+function removePart(index) { 
+    buildParts.splice(index, 1); 
+    updateBuildDisplay();
+    updatePartsList();
+}
+
+function updatePartsList() {
+    const usedPartIds = new Set(buildParts.map(p => p.part_id));
+    document.querySelectorAll('.part-item').forEach(part => {
+        const partId = part.dataset.partId;
+        part.style.display = usedPartIds.has(partId) ? 'none' : 'block';
+    });
+}
 
 function updateBuildDisplay() {
     const buildPartsDiv = document.getElementById('buildParts');
