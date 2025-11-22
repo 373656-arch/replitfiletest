@@ -117,7 +117,7 @@ renderHeader();
         <div class="build-area">
             <div class="parts-panel">
                 <h3>Available Parts</h3>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.5rem;">
                     <input type="text" id="searchParts" placeholder="Search parts..." onkeyup="filterParts()" style="flex: 1; margin-bottom: 0;">
                     <div class="category-dropdown">
                         <button id="categoryBtn" class="filter-icon-btn" onclick="toggleCategoryDropdown()" title="Filter by category">☰</button>
