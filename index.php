@@ -120,35 +120,51 @@ renderHeader();
                 <h3>Available Parts</h3>
                 <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.5rem;">
                     <input type="text" id="searchParts" placeholder="Search parts..." onkeyup="filterParts()" style="flex: 1; margin-bottom: 0;">
-                    <div class="category-dropdown">
-                        <button id="categoryBtn" class="filter-icon-btn" onclick="toggleCategoryDropdown()" title="Filter by category">☰</button>
-                        <div id="categoryDropdown" class="dropdown-menu" style="display: none;">
-                            <div class="dropdown-item" onclick="selectCategory('all', 'All')">All Categories</div>
-                            <div class="dropdown-item" onclick="selectCategory('Exhaust', 'Exhaust')">Exhaust</div>
-                            <div class="dropdown-item" onclick="selectCategory('Intake', 'Intake')">Intake</div>
-                            <div class="dropdown-item" onclick="selectCategory('Suspension', 'Suspension')">Suspension</div>
-                            <div class="dropdown-item" onclick="selectCategory('Wheels', 'Wheels')">Wheels</div>
-                            <div class="dropdown-item" onclick="selectCategory('Tires', 'Tires')">Tires</div>
-                            <div class="dropdown-item" onclick="selectCategory('Brakes', 'Brakes')">Brakes</div>
-                        </div>
-                    </div>
                 </div>
 
-                <div id="partsList">
-                    <?php foreach ($parts as $part): ?>
-                        <div class="part-item" 
-                             data-part-id="<?php echo $part['part_id']; ?>"
-                             data-category="<?php echo htmlspecialchars($part['category']); ?>"
-                             data-name="<?php echo htmlspecialchars($part['name']); ?>"
-                             data-price="<?php echo $part['price']; ?>"
-                             draggable="true"
-                             ondragstart="drag(event)">
-                            <?php if ($part['image']): ?>
-                                <img src="<?php echo htmlspecialchars($part['image']); ?>" alt="<?php echo htmlspecialchars($part['name']); ?>">
-                            <?php endif; ?>
-                            <h4><?php echo htmlspecialchars($part['name']); ?></h4>
-                            <p class="price">$<?php echo number_format($part['price'], 2); ?></p>
-                            <a href="/redirect.php?part_id=<?php echo $part['part_id']; ?>" target="_blank" class="btn btn-secondary">View</a>
+                <div id="partsList" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <?php 
+                    $categories = [];
+                    foreach ($parts as $part) {
+                        $cat = $part['category'];
+                        if (!isset($categories[$cat])) {
+                            $categories[$cat] = [];
+                        }
+                        $categories[$cat][] = $part;
+                    }
+                    foreach ($categories as $category => $category_parts): ?>
+                        <div class="parts-category">
+                            <button class="category-header" onclick="toggleCategory(this)" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 1rem; background: var(--bg-primary); border: 1px solid var(--bg-secondary); border-radius: 5px; cursor: pointer; font-weight: 600; color: var(--text-primary); border: none;">
+                                <span><?php echo htmlspecialchars($category); ?> (<?php echo count($category_parts); ?>)</span>
+                                <span style="font-size: 1.2rem;">▼</span>
+                            </button>
+                            <div class="category-parts" style="display: none; padding: 0.5rem 0;">
+                                <?php foreach ($category_parts as $part): ?>
+                                    <div class="part-card pcpartpicker-style" 
+                                         data-part-id="<?php echo $part['part_id']; ?>"
+                                         data-category="<?php echo htmlspecialchars($part['category']); ?>"
+                                         data-name="<?php echo htmlspecialchars($part['name']); ?>"
+                                         data-price="<?php echo $part['price']; ?>"
+                                         style="background: var(--bg-secondary); border: 1px solid var(--bg-primary); border-radius: 4px; padding: 0.75rem; margin-bottom: 0.5rem; display: flex; gap: 0.75rem; align-items: center;">
+                                        
+                                        <?php if ($part['image']): ?>
+                                            <img src="<?php echo htmlspecialchars($part['image']); ?>" alt="<?php echo htmlspecialchars($part['name']); ?>" style="width: 60px; height: 60px; object-fit: cover; border-radius: 3px;">
+                                        <?php else: ?>
+                                            <div style="width: 60px; height: 60px; background: var(--bg-primary); border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: var(--text-secondary);">No Image</div>
+                                        <?php endif; ?>
+                                        
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p style="margin: 0 0 0.25rem 0; font-weight: 500; color: var(--text-primary); word-wrap: break-word;"><?php echo htmlspecialchars($part['name']); ?></p>
+                                            <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">$<?php echo number_format($part['price'], 2); ?></p>
+                                        </div>
+                                        
+                                        <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
+                                            <button class="btn" onclick="addPartToBuild({part_id: <?php echo $part['part_id']; ?>, name: '<?php echo htmlspecialchars(addslashes($part['name'])); ?>', price: <?php echo $part['price']; ?>, position: '<?php echo htmlspecialchars($part['category']); ?>'})" style="padding: 0.5rem 1rem; font-size: 0.85rem; white-space: nowrap;">+ Add</button>
+                                            <a href="/redirect.php?part_id=<?php echo $part['part_id']; ?>" target="_blank" class="btn btn-secondary" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;">📎</a>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -214,13 +230,33 @@ renderHeader();
 
 <script>
 let buildParts = [];
-let currentCategory = 'all';
 
-function drag(event) {
-    event.dataTransfer.setData("partId", event.target.dataset.partId);
-    event.dataTransfer.setData("partName", event.target.dataset.name);
-    event.dataTransfer.setData("partPrice", event.target.dataset.price);
-    event.dataTransfer.setData("partCategory", event.target.dataset.category);
+function toggleCategory(button) {
+    const partsDiv = button.nextElementSibling;
+    const arrow = button.querySelector('span:last-child');
+    if (partsDiv.style.display === 'none') {
+        partsDiv.style.display = 'block';
+        arrow.style.transform = 'rotate(0deg)';
+    } else {
+        partsDiv.style.display = 'none';
+        arrow.style.transform = 'rotate(-90deg)';
+    }
+}
+
+function addPartToBuild(part) {
+    const slotMap = {
+        'Exhaust': 'exhaust', 'Intake': 'intake', 'Suspension': 'suspension',
+        'Wheels': 'wheels', 'Tires': 'tires', 'Brakes': 'brakes'
+    };
+    const position = slotMap[part.position] || 'general';
+
+    buildParts.push({ 
+        part_id: part.part_id, 
+        name: part.name, 
+        price: parseFloat(part.price), 
+        position: position 
+    });
+    updateBuildDisplay();
 }
 
 function allowDrop(event) { event.preventDefault(); event.currentTarget.classList.add('drag-over'); }
@@ -229,21 +265,6 @@ function dragLeave(event) { event.currentTarget.classList.remove('drag-over'); }
 function drop(event) {
     event.preventDefault(); 
     event.currentTarget.classList.remove('drag-over');
-
-    const partId = event.dataTransfer.getData("partId");
-    const partName = event.dataTransfer.getData("partName");
-    const partPrice = parseFloat(event.dataTransfer.getData("partPrice"));
-    const partCategory = event.dataTransfer.getData("partCategory");
-
-    const slotMap = {
-        'Exhaust': 'exhaust', 'Intake': 'intake', 'Suspension': 'suspension',
-        'Wheels': 'wheels', 'Tires': 'tires', 'Brakes': 'brakes'
-    };
-    const position = slotMap[partCategory] || 'general';
-
-    buildParts.push({ part_id: partId, name: partName, price: partPrice, position: position });
-    updateBuildDisplay();
-    updatePartsList();
 }
 
 function removePart(index) { 
@@ -254,9 +275,10 @@ function removePart(index) {
 
 function updatePartsList() {
     const usedPartIds = new Set(buildParts.map(p => p.part_id));
-    document.querySelectorAll('.part-item').forEach(part => {
+    document.querySelectorAll('.part-card').forEach(part => {
         const partId = part.dataset.partId;
-        part.style.display = usedPartIds.has(partId) ? 'none' : 'block';
+        part.style.opacity = usedPartIds.has(partId) ? '0.5' : '1';
+        part.style.pointerEvents = usedPartIds.has(partId) ? 'none' : 'auto';
     });
 }
 
@@ -353,32 +375,10 @@ function fetchSimilarBuilds() {
 
 function filterParts() {
     const searchTerm = document.getElementById('searchParts').value.toLowerCase();
-    document.querySelectorAll('.part-item').forEach(part => {
+    document.querySelectorAll('.part-card').forEach(part => {
         const name = part.dataset.name.toLowerCase();
-        const category = part.dataset.category;
-        part.style.display = (name.includes(searchTerm) && (currentCategory === 'all' || category === currentCategory)) ? 'block' : 'none';
+        part.style.display = name.includes(searchTerm) ? 'block' : 'none';
     });
-}
-
-function toggleCategoryDropdown() {
-    const dropdown = document.getElementById('categoryDropdown');
-    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-    document.addEventListener('click', closeDropdownOnClickOutside);
-}
-
-function closeDropdownOnClickOutside(event) {
-    const dropdown = document.getElementById('categoryDropdown');
-    const categoryDiv = document.querySelector('.category-dropdown');
-    if (!categoryDiv.contains(event.target)) {
-        dropdown.style.display = 'none';
-        document.removeEventListener('click', closeDropdownOnClickOutside);
-    }
-}
-
-function selectCategory(category, label) {
-    currentCategory = category;
-    document.getElementById('categoryDropdown').style.display = 'none';
-    filterParts();
 }
 
 function showSaveModal() {
