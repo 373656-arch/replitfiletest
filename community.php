@@ -277,7 +277,7 @@ renderHeader();
                         <?php endif; ?>
                         <div class="build-card-content">
                             <h3><?php echo htmlspecialchars($build['build_title']); ?></h3>
-                            <p>by <?php echo htmlspecialchars($build['creator_name']); ?></p>
+                            <p>by <a href="/public_profile.php?username=<?php echo urlencode($build['creator_name']); ?>" style="color: var(--accent-2); text-decoration: none;"><?php echo htmlspecialchars($build['creator_name']); ?></a></p>
                             <p><?php echo htmlspecialchars($build['car_name']); ?></p>
                             <p class="price" style="color: var(--accent-1); font-weight: bold;">$<?php echo number_format((float)$build['total_price'], 2); ?></p>
                             <p>👍 <?php echo (int)$build['likes_count']; ?> likes</p>
@@ -297,7 +297,7 @@ renderHeader();
 
         <div class="card">
             <h2><?php echo htmlspecialchars($selected_build['build_title']); ?></h2>
-            <p>by <strong><?php echo htmlspecialchars($selected_build['creator_name']); ?></strong></p>
+            <p>by <a href="/public_profile.php?user=<?php echo (int)$selected_build['creator_id']; ?>" style="color: var(--accent-2); text-decoration: none;"><strong><?php echo htmlspecialchars($selected_build['creator_name']); ?></strong></a></p>
             <p><?php echo htmlspecialchars($selected_build['car_name']); ?></p>
             <p style="font-size: 1.5rem; color: var(--accent-1); font-weight: bold;">Total: $<?php echo number_format((float)$selected_build['total_price'], 2); ?></p>
             <p>👍 <?php echo (int)$selected_build['likes_count']; ?> likes</p>
@@ -383,7 +383,7 @@ renderHeader();
             <?php while ($comment = $comments->fetch_assoc()): ?>
                 <div class="comment">
                     <div class="comment-header">
-                        <span class="comment-author"><?php echo htmlspecialchars($comment['username']); ?></span>
+                        <a href="/public_profile.php?username=<?php echo urlencode($comment['username']); ?>" style="color: var(--accent-2); text-decoration: none;"><span class="comment-author"><?php echo htmlspecialchars($comment['username']); ?></span></a>
                         <span style="font-size: 0.9rem; opacity: 0.7;"><?php echo date('M j, Y', strtotime($comment['date_posted'])); ?></span>
                     </div>
                     <p><?php echo nl2br(htmlspecialchars($comment['content'])); ?></p>
@@ -432,7 +432,7 @@ renderHeader();
                     <?php foreach ($replies_array as $reply): ?>
                         <div class="comment reply">
                             <div class="comment-header">
-                                <span class="comment-author"><?php echo htmlspecialchars($reply['username']); ?></span>
+                                <a href="/public_profile.php?username=<?php echo urlencode($reply['username']); ?>" style="color: var(--accent-2); text-decoration: none;"><span class="comment-author"><?php echo htmlspecialchars($reply['username']); ?></span></a>
                                 <span style="font-size: 0.9rem; opacity: 0.7;"><?php echo date('M j, Y', strtotime($reply['date_posted'])); ?></span>
                             </div>
                             <p><?php echo nl2br(htmlspecialchars($reply['content'])); ?></p>

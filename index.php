@@ -337,7 +337,10 @@ function fetchSimilarBuilds() {
                         <p style="margin: 0; font-weight: 500; color: var(--text-primary);">${build.build_title}</p>
                         <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">by ${build.username} • ${build.parts_count} parts • $${parseFloat(build.total_price).toFixed(2)}</p>
                     </div>
-                    <a href="/user/profile.php?view_build=${build.build_id}" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem; white-space: nowrap; margin-left: 1rem;">View</a>
+                    <div style="text-align: right;">
+                        <a href="/public_profile.php?username=${build.username}" style="color: var(--accent-2); font-size: 0.85rem; text-decoration: none; margin-right: 0.5rem;">by ${build.username}</a>
+                        <a href="/community.php?build=${build.build_id}" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">View</a>
+                    </div>
                 </div>
             `).join('');
             container.style.display = 'block';
