@@ -495,6 +495,24 @@ label {
     background-color: var(--bg-secondary);
 }
 
+.replies-container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.toggle-replies {
+    background-color: var(--bg-secondary) !important;
+    border: 1px solid var(--accent-3) !important;
+    color: var(--accent-3) !important;
+}
+
+.toggle-replies:hover {
+    background-color: var(--accent-3) !important;
+    color: var(--bg-primary) !important;
+}
+
 .comment-header {
     display: flex;
     justify-content: space-between;

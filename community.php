@@ -419,9 +419,9 @@ renderHeader();
                     ");
                     $stmt2->bind_param("i", $comment['comment_id']);
                     $stmt2->execute();
-                    $replies = $stmt2->get_result();
-                    $reply_count = $replies->num_rows;
-                    $replies = $stmt2->get_result();
+                    $replies_result = $stmt2->get_result();
+                    $replies_array = $replies_result->fetch_all(MYSQLI_ASSOC);
+                    $reply_count = count($replies_array);
                     ?>
 
                     <?php if ($reply_count > 0): ?>
@@ -429,7 +429,7 @@ renderHeader();
                         <div id="replies-container-<?php echo (int)$comment['comment_id']; ?>" class="replies-container" style="display: none;">
                     <?php endif; ?>
 
-                    <?php while ($reply = $replies->fetch_assoc()): ?>
+                    <?php foreach ($replies_array as $reply): ?>
                         <div class="comment reply">
                             <div class="comment-header">
                                 <span class="comment-author"><?php echo htmlspecialchars($reply['username']); ?></span>
@@ -445,7 +445,11 @@ renderHeader();
                                 </form>
                             <?php endif; ?>
                         </div>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
+                    
+                    <?php if ($reply_count > 0): ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             <?php endwhile; ?>
         </div>
@@ -457,6 +461,20 @@ function showReplyForm(commentId) {
     const form = document.getElementById('reply-form-' + commentId);
     if (!form) return;
     form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleReplies(commentId) {
+    const container = document.getElementById('replies-container-' + commentId);
+    const button = event.target.closest('.toggle-replies');
+    if (!container) return;
+    
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        button.textContent = 'Hide Replies (' + document.getElementById('reply-count-' + commentId).textContent + ')';
+    } else {
+        container.style.display = 'none';
+        button.textContent = 'Show Replies (' + document.getElementById('reply-count-' + commentId).textContent + ')';
+    }
 }
 </script>
 
