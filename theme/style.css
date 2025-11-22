@@ -102,8 +102,6 @@ header nav a:hover {
 main {
     flex: 1;
     padding: 2rem;
-    max-width: 900px;
-    margin: 0 auto;
     width: 100%;
 }
 
@@ -117,7 +115,7 @@ footer {
 }
 
 .container {
-    max-width: 1600px;
+    width: 100%;
     margin: 0 auto;
     padding: 0 2rem;
 }
@@ -209,10 +207,11 @@ label {
 
 .build-area {
     display: grid;
-    grid-template-columns: 1fr 1.5fr;
-    gap: 3rem;
+    grid-template-columns: 400px 1fr;
+    gap: 4rem;
     margin-top: 3rem;
     margin-bottom: 3rem;
+    width: 100%;
 }
 
 .parts-panel {
