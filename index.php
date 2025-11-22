@@ -164,7 +164,7 @@ renderHeader();
                     <p><strong>Parts Count:</strong> <span id="partsCount">0</span></p>
 
                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
-                        <button class="btn" onclick="generateShareableLink()" style="flex: 1; min-width: 150px;">Share Link</button>
+                        <button class="btn" onclick="generateShareableLink(this)" style="flex: 1; min-width: 150px;">Share Link</button>
                         <?php if (isLoggedIn()): ?>
                             <button class="btn" onclick="showSaveModal()" style="flex: 1; min-width: 150px;">Save Build</button>
                         <?php else: ?>
@@ -293,7 +293,7 @@ function prepareBuildData() {
 })();
 <?php endif; ?>
 
-function generateShareableLink() {
+function generateShareableLink(buttonElement) {
     if (!buildParts.length) {
         alert('Please add at least one part to your build before sharing.');
         return;
@@ -312,14 +312,16 @@ function generateShareableLink() {
     // Copy to clipboard
     navigator.clipboard.writeText(shareLink).then(() => {
         // Show feedback
-        const button = event.target;
-        const originalText = button.textContent;
-        button.textContent = 'Copied!';
-        button.style.background = '#10b981';
-        setTimeout(() => {
-            button.textContent = originalText;
-            button.style.background = '';
-        }, 2000);
+        const button = buttonElement || document.querySelector('button[onclick*="generateShareableLink"]');
+        if (button) {
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            button.style.background = '#10b981';
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.style.background = '';
+            }, 2000);
+        }
     }).catch(err => {
         alert('Failed to copy link. Please try again.');
         console.error('Clipboard error:', err);
