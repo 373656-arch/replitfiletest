@@ -257,7 +257,7 @@ label {
     display: grid;
     grid-template-columns: 60px 1fr auto auto;
     gap: 1rem;
-    align-items: center;
+    align-items: flex-start;
     height: auto;
 }
 
@@ -272,7 +272,7 @@ label {
     object-fit: cover;
     border-radius: 4px;
     grid-column: 1;
-    grid-row: 1;
+    grid-row: 1 / 4;
 }
 
 .part-item h4 {
@@ -281,9 +281,8 @@ label {
     margin: 0;
     color: var(--accent-2);
     font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-wrap: break-word;
+    line-height: 1.3;
 }
 
 .part-item p {
@@ -294,19 +293,23 @@ label {
 
 .part-item .price {
     grid-column: 3;
+    grid-row: 1 / 4;
     font-size: 1rem;
     font-weight: bold;
     color: var(--accent-1);
     margin: 0;
     white-space: nowrap;
+    align-self: center;
 }
 
 .part-item .btn {
     grid-column: 4;
+    grid-row: 1 / 4;
     font-size: 0.8rem;
     padding: 0.4rem 0.8rem;
     margin: 0;
     white-space: nowrap;
+    align-self: center;
 }
 
 .drop-zone {
