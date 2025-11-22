@@ -146,9 +146,8 @@ renderHeader();
                                 <img src="<?php echo htmlspecialchars($part['image']); ?>" alt="<?php echo htmlspecialchars($part['name']); ?>">
                             <?php endif; ?>
                             <h4><?php echo htmlspecialchars($part['name']); ?></h4>
-                            <p><?php echo htmlspecialchars($part['description']); ?></p>
                             <p class="price">$<?php echo number_format($part['price'], 2); ?></p>
-                            <a href="/redirect.php?part_id=<?php echo $part['part_id']; ?>" target="_blank" class="btn btn-secondary" style="margin-top: 0.5rem; font-size: 0.9rem; padding: 0.5rem;">View Product</a>
+                            <a href="/redirect.php?part_id=<?php echo $part['part_id']; ?>" target="_blank" class="btn btn-secondary">View</a>
                         </div>
                     <?php endforeach; ?>
                 </div>
