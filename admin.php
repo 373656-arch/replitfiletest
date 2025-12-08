@@ -128,6 +128,7 @@ renderHeader();
             <h3>Navigation</h3>
             <nav>
                 <a href="?section=dashboard" class="<?php echo ($section === 'dashboard') ? 'active' : ''; ?>">Dashboard</a>
+                <a href="?section=database" class="<?php echo ($section === 'database') ? 'active' : ''; ?>">Database Visualization</a>
                 <a href="?section=cars" class="<?php echo ($section === 'cars') ? 'active' : ''; ?>">Car Management</a>
                 <a href="?section=parts" class="<?php echo ($section === 'parts') ? 'active' : ''; ?>">Part Management</a>
                 <a href="?section=sources" class="<?php echo ($section === 'sources') ? 'active' : ''; ?>">Affiliate Sources</a>
@@ -135,7 +136,303 @@ renderHeader();
         </div>
 
         <div>
-            <?php if ($section === 'dashboard'): ?>
+            <?php if ($section === 'database'): ?>
+                <h3>Database Visualization</h3>
+                <p style="margin-bottom: 20px; color: var(--text-secondary);">Real-time view of all database tables and their relationships. Auto-refreshes every 10 seconds.</p>
+
+                <div class="db-viz-container">
+                    <!-- Entity Relationship Diagram -->
+                    <div class="card" style="margin-bottom: 30px;">
+                        <h4>Entity Relationship Diagram</h4>
+                        <div id="erDiagram" style="min-height: 500px; overflow: auto;">
+                            <svg id="erSvg" width="100%" height="600"></svg>
+                        </div>
+                    </div>
+
+                    <!-- Table Statistics -->
+                    <div class="db-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                        <?php
+                        $tables = ['users', 'cars', 'parts', 'builds', 'build_parts', 'comments', 'user_likes', 'user_saved_builds', 'part_compatibility', 'affiliate_sources'];
+                        foreach ($tables as $table):
+                            $count_query = $conn->query("SELECT COUNT(*) as count FROM $table");
+                            $count = $count_query ? $count_query->fetch_assoc()['count'] : 0;
+                        ?>
+                            <div class="card" style="text-align: center;">
+                                <h4><?php echo ucwords(str_replace('_', ' ', $table)); ?></h4>
+                                <div style="font-size: 2.5em; font-weight: bold; color: #DC2626; margin: 10px 0;" id="count-<?php echo $table; ?>">
+                                    <?php echo number_format($count); ?>
+                                </div>
+                                <div style="color: var(--text-secondary); font-size: 0.9em;">Total Records</div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <!-- Detailed Table Views -->
+                    <div class="card">
+                        <h4>Table Details</h4>
+                        <div id="tableAccordion">
+                            <?php
+                            $detailed_tables = [
+                                'users' => ['uid', 'username', 'email', 'profileImage'],
+                                'cars' => ['car_id', 'brand', 'model', 'year', 'name'],
+                                'parts' => ['part_id', 'name', 'category', 'price', 'source_id'],
+                                'builds' => ['build_id', 'user_id', 'car_id', 'build_title', 'total_price', 'is_community_shared', 'likes_count'],
+                                'build_parts' => ['build_id', 'part_id', 'position_data'],
+                                'comments' => ['comment_id', 'build_id', 'user_id', 'content', 'date_posted'],
+                                'user_likes' => ['user_id', 'build_id'],
+                                'user_saved_builds' => ['user_id', 'build_id', 'date_saved'],
+                                'part_compatibility' => ['part_id', 'car_id'],
+                                'affiliate_sources' => ['source_id', 'source_name', 'base_url']
+                            ];
+
+                            foreach ($detailed_tables as $table => $columns):
+                                $result = $conn->query("SELECT * FROM $table ORDER BY " . $columns[0] . " DESC LIMIT 100");
+                            ?>
+                                <div class="table-accordion-item">
+                                    <button class="accordion-header" onclick="toggleAccordion('<?php echo $table; ?>')">
+                                        <span><?php echo ucwords(str_replace('_', ' ', $table)); ?></span>
+                                        <span class="accordion-icon">▼</span>
+                                    </button>
+                                    <div id="accordion-<?php echo $table; ?>" class="accordion-content">
+                                        <div style="overflow-x: auto;">
+                                            <table style="width: 100%; font-size: 0.9em;">
+                                                <thead>
+                                                    <tr>
+                                                        <?php foreach ($columns as $col): ?>
+                                                            <th><?php echo htmlspecialchars($col); ?></th>
+                                                        <?php endforeach; ?>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="tbody-<?php echo $table; ?>">
+                                                    <?php
+                                                    if ($result):
+                                                        while ($row = $result->fetch_assoc()):
+                                                    ?>
+                                                        <tr>
+                                                            <?php foreach ($columns as $col): ?>
+                                                                <td><?php echo htmlspecialchars($row[$col] ?? 'NULL'); ?></td>
+                                                            <?php endforeach; ?>
+                                                        </tr>
+                                                    <?php
+                                                        endwhile;
+                                                    endif;
+                                                    ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <!-- Relationship Metrics -->
+                    <div class="card" style="margin-top: 30px;">
+                        <h4>Database Relationships & Metrics</h4>
+                        <div id="relationshipMetrics"></div>
+                    </div>
+                </div>
+
+                <style>
+                    .db-viz-container {
+                        animation: fadeIn 0.5s;
+                    }
+
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+
+                    .table-accordion-item {
+                        border: 1px solid var(--border-color);
+                        border-radius: 8px;
+                        margin-bottom: 10px;
+                        overflow: hidden;
+                    }
+
+                    .accordion-header {
+                        width: 100%;
+                        padding: 15px 20px;
+                        background: var(--card-bg);
+                        border: none;
+                        cursor: pointer;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        font-weight: 600;
+                        color: var(--text-primary);
+                        transition: background 0.3s;
+                    }
+
+                    .accordion-header:hover {
+                        background: var(--hover-bg);
+                    }
+
+                    .accordion-icon {
+                        transition: transform 0.3s;
+                        font-size: 0.8em;
+                    }
+
+                    .accordion-header.active .accordion-icon {
+                        transform: rotate(-180deg);
+                    }
+
+                    .accordion-content {
+                        max-height: 0;
+                        overflow: hidden;
+                        transition: max-height 0.3s ease-out;
+                        background: var(--bg-primary);
+                    }
+
+                    .accordion-content.open {
+                        max-height: 2000px;
+                        padding: 20px;
+                    }
+
+                    .db-node {
+                        cursor: pointer;
+                        transition: all 0.3s;
+                    }
+
+                    .db-node:hover rect {
+                        fill: #B91C1C;
+                    }
+
+                    .db-relationship {
+                        stroke: #F97316;
+                        stroke-width: 2;
+                        fill: none;
+                        marker-end: url(#arrowhead);
+                    }
+
+                    .metric-item {
+                        padding: 15px;
+                        border-left: 4px solid #DC2626;
+                        margin-bottom: 15px;
+                        background: var(--card-bg);
+                        border-radius: 4px;
+                    }
+
+                    .metric-item strong {
+                        color: #DC2626;
+                        font-size: 1.2em;
+                    }
+                </style>
+
+                <script>
+                    function toggleAccordion(tableId) {
+                        const content = document.getElementById('accordion-' + tableId);
+                        const header = content.previousElementSibling;
+                        
+                        content.classList.toggle('open');
+                        header.classList.toggle('active');
+                    }
+
+                    // Draw ER Diagram
+                    function drawERDiagram() {
+                        const svg = document.getElementById('erSvg');
+                        const width = svg.clientWidth;
+                        const height = 600;
+
+                        // Define nodes (tables)
+                        const nodes = [
+                            { id: 'users', x: 150, y: 50, width: 120, height: 80, label: 'Users', color: '#DC2626' },
+                            { id: 'cars', x: 450, y: 50, width: 120, height: 80, label: 'Cars', color: '#F97316' },
+                            { id: 'parts', x: 450, y: 250, width: 120, height: 80, label: 'Parts', color: '#10B981' },
+                            { id: 'affiliate_sources', x: 750, y: 250, width: 140, height: 80, label: 'Affiliate Sources', color: '#3B82F6' },
+                            { id: 'part_compatibility', x: 450, y: 450, width: 150, height: 80, label: 'Part Compatibility', color: '#8B5CF6' },
+                            { id: 'user_garages', x: 150, y: 250, width: 120, height: 80, label: 'User Garages', color: '#EC4899' },
+                            { id: 'click_logs', x: 150, y: 450, width: 120, height: 80, label: 'Click Logs', color: '#F59E0B' }
+                        ];
+
+                        // Define relationships
+                        const relationships = [
+                            { from: 'user_garages', to: 'users', label: 'user_id' },
+                            { from: 'user_garages', to: 'cars', label: 'car_id' },
+                            { from: 'part_compatibility', to: 'parts', label: 'part_id' },
+                            { from: 'part_compatibility', to: 'cars', label: 'car_id' },
+                            { from: 'parts', to: 'affiliate_sources', label: 'source_id' },
+                            { from: 'click_logs', to: 'parts', label: 'part_id' },
+                            { from: 'click_logs', to: 'users', label: 'user_id' }
+                        ];
+
+                        let svgContent = '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#F97316" /></marker></defs>';
+
+                        // Draw relationships first (so they appear behind nodes)
+                        relationships.forEach(rel => {
+                            const fromNode = nodes.find(n => n.id === rel.from);
+                            const toNode = nodes.find(n => n.id === rel.to);
+                            
+                            const x1 = fromNode.x + fromNode.width / 2;
+                            const y1 = fromNode.y + fromNode.height / 2;
+                            const x2 = toNode.x + toNode.width / 2;
+                            const y2 = toNode.y + toNode.height / 2;
+
+                            svgContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="db-relationship" />`;
+                            
+                            const midX = (x1 + x2) / 2;
+                            const midY = (y1 + y2) / 2;
+                            svgContent += `<text x="${midX}" y="${midY - 5}" fill="#F97316" font-size="11" text-anchor="middle">${rel.label}</text>`;
+                        });
+
+                        // Draw nodes
+                        nodes.forEach(node => {
+                            svgContent += `
+                                <g class="db-node">
+                                    <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" 
+                                          fill="${node.color}" rx="8" opacity="0.9" />
+                                    <text x="${node.x + node.width / 2}" y="${node.y + node.height / 2}" 
+                                          fill="white" font-size="14" font-weight="bold" text-anchor="middle" 
+                                          dominant-baseline="middle">${node.label}</text>
+                                </g>
+                            `;
+                        });
+
+                        svg.innerHTML = svgContent;
+                    }
+
+                    // Update metrics
+                    function updateMetrics() {
+                        fetch('get_db_metrics.php')
+                            .then(response => response.json())
+                            .then(data => {
+                                let html = '';
+                                html += `<div class="metric-item"><strong>${data.avg_parts_per_car}</strong> average parts per car</div>`;
+                                html += `<div class="metric-item"><strong>${data.total_compatibilities}</strong> total part-car compatibility records</div>`;
+                                html += `<div class="metric-item"><strong>${data.users_with_garages}</strong> users have cars in their garage</div>`;
+                                html += `<div class="metric-item"><strong>${data.parts_with_clicks}</strong> parts have been clicked at least once</div>`;
+                                html += `<div class="metric-item"><strong>${data.avg_price}</strong> average part price</div>`;
+                                
+                                document.getElementById('relationshipMetrics').innerHTML = html;
+                            })
+                            .catch(err => console.error('Error loading metrics:', err));
+                    }
+
+                    // Auto-refresh data
+                    function refreshData() {
+                        // Refresh counts
+                        <?php foreach ($tables as $table): ?>
+                        fetch('get_table_count.php?table=<?php echo $table; ?>')
+                            .then(response => response.json())
+                            .then(data => {
+                                document.getElementById('count-<?php echo $table; ?>').textContent = 
+                                    new Intl.NumberFormat().format(data.count);
+                            });
+                        <?php endforeach; ?>
+
+                        updateMetrics();
+                    }
+
+                    // Initialize
+                    drawERDiagram();
+                    updateMetrics();
+                    setInterval(refreshData, 10000); // Refresh every 10 seconds
+
+                    // Redraw diagram on window resize
+                    window.addEventListener('resize', drawERDiagram);
+                </script>
+
+            <?php elseif ($section === 'dashboard'): ?>
                 <h3>Analytics Dashboard</h3>
 
                 <div class="chart-container">
