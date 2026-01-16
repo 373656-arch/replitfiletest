@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
         }
     }
 }
-$pageTitle = "Build Your Car - ModMyCar";
+$pageTitle = "Build Your Car - Test Drive";
 require_once 'includes/headerFooter.php';
 renderHeader();
 ?>
