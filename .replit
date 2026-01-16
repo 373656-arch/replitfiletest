@@ -1,9 +1,10 @@
 run = "php -S 0.0.0.0:8000 -t ."
 
 entrypoint = "index.php"
+modules = ["php-8.2", "web", "nix"]
 
 [nix]
-channel = "stable-22_11"
+channel = "stable-25_05"
 
 [deployment]
 run = ["php", "-S", "0.0.0.0:8000", "-t", "."]
@@ -16,10 +17,6 @@ externalPort = 80
 [[ports]]
 localPort = 8000
 externalPort = 8000
-
-[[ports]]
-localPort = 40701
-externalPort = 3000
 
 [agent]
 expertMode = true
