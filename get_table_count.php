@@ -1,5 +1,3 @@
-
-
 <?php require_once 'config.php'; if (!isLoggedIn()) { header('Location: /user/login.php'); exit; } $user = getUserData($_SESSION['user_id']); if (!isAdmin($user['email'])) { header('Location: /index.php'); exit; } $section = $_GET['section'] ?? 'dashboard'; $success = ''; $error =
 
 pasted

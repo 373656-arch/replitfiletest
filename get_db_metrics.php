@@ -22,7 +22,7 @@ try {
 
     // Average parts per car
     $result = $conn->query("
-        SELECT COALESCE(COUNT(*) / NULLIF((SELECT COUNT(*) FROM cars), 0), 0) as avg 
+        SELECT COUNT(*) / (SELECT COUNT(*) FROM cars) as avg 
         FROM part_compatibility
     ");
     $row = $result->fetch_assoc();
@@ -33,30 +33,20 @@ try {
     $row = $result->fetch_assoc();
     $metrics['total_compatibilities'] = $row['count'];
 
-    // Total builds shared
-    $result = $conn->query("SELECT COUNT(*) as count FROM builds WHERE is_community_shared = 1");
+    // Users with garages
+    $result = $conn->query("SELECT COUNT(DISTINCT user_id) as count FROM user_saved_builds");
     $row = $result->fetch_assoc();
-    $metrics['community_builds'] = $row['count'];
+    $metrics['users_with_garages'] = $row['count'];
 
-    // Total comments
-    $result = $conn->query("SELECT COUNT(*) as count FROM comments");
+    // Parts with clicks
+    $result = $conn->query("SELECT COUNT(DISTINCT part_id) as count FROM click_logs");
     $row = $result->fetch_assoc();
-    $metrics['total_comments'] = $row['count'];
-
-    // Average build price
-    $result = $conn->query("SELECT AVG(total_price) as avg FROM builds");
-    $row = $result->fetch_assoc();
-    $metrics['avg_build_price'] = '$' . number_format($row['avg'] ?? 0, 2);
-
-    // Most liked build
-    $result = $conn->query("SELECT MAX(likes_count) as max_likes FROM builds");
-    $row = $result->fetch_assoc();
-    $metrics['max_likes_on_build'] = $row['max_likes'] ?? 0;
+    $metrics['parts_with_clicks'] = $row['count'];
 
     // Average part price
     $result = $conn->query("SELECT AVG(price) as avg FROM parts");
     $row = $result->fetch_assoc();
-    $metrics['avg_part_price'] = '$' . number_format($row['avg'] ?? 0, 2);
+    $metrics['avg_price'] = '$' . number_format($row['avg'], 2);
 
     echo json_encode($metrics);
 } catch (Exception $e) {

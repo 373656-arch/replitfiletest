@@ -1,21 +1,17 @@
 <?php
 require_once 'config.php';
-
 if (!isLoggedIn()) {
     header('Location: /user/login.php');
     exit;
 }
-
 $user = getUserData($_SESSION['user_id']);
 if (!isAdmin($user['email'])) {
     header('Location: /index.php');
     exit;
 }
-
 $section = $_GET['section'] ?? 'dashboard';
 $success = '';
 $error = '';
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['add_car'])) {
         $brand = trim($_POST['brand']);
@@ -23,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $year = (int)$_POST['year'];
         $name = "$year $brand $model";
         $image = trim($_POST['image'] ?? '');
-        
+
         $stmt = $conn->prepare("INSERT INTO cars (brand, model, year, name, image) VALUES (?, ?, ?, ?, ?)");
         $stmt->bind_param("sssss", $brand, $model, $year, $name, $image);
         if ($stmt->execute()) {
@@ -32,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Failed to add car.";
         }
     }
-    
+
     if (isset($_POST['delete_car'])) {
         $car_id = (int)$_POST['car_id'];
         $stmt = $conn->prepare("DELETE FROM cars WHERE car_id = ?");
@@ -41,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = "Car deleted successfully!";
         }
     }
-    
+
     if (isset($_POST['add_part'])) {
         $name = trim($_POST['name']);
         $price = (float)$_POST['price'];
@@ -51,12 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $link = trim($_POST['link']);
         $category = $_POST['category'];
         $source_id = !empty($_POST['source_id']) ? (int)$_POST['source_id'] : null;
-        
+
         $stmt = $conn->prepare("INSERT INTO parts (name, price, color, description, image, link, category, source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("sdsssssi", $name, $price, $color, $description, $image, $link, $category, $source_id);
         if ($stmt->execute()) {
             $part_id = $conn->insert_id;
-            
+
             if (!empty($_POST['compatible_cars'])) {
                 foreach ($_POST['compatible_cars'] as $car_id) {
                     $stmt2 = $conn->prepare("INSERT INTO part_compatibility (part_id, car_id) VALUES (?, ?)");
@@ -64,13 +60,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt2->execute();
                 }
             }
-            
+
             $success = "Part added successfully!";
         } else {
             $error = "Failed to add part.";
         }
     }
-    
+
     if (isset($_POST['delete_part'])) {
         $part_id = (int)$_POST['part_id'];
         $stmt = $conn->prepare("DELETE FROM parts WHERE part_id = ?");
@@ -79,11 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = "Part deleted successfully!";
         }
     }
-    
+
     if (isset($_POST['add_source'])) {
         $source_name = trim($_POST['source_name']);
         $base_url = trim($_POST['base_url']);
-        
+
         $stmt = $conn->prepare("INSERT INTO affiliate_sources (source_name, base_url) VALUES (?, ?)");
         $stmt->bind_param("ss", $source_name, $base_url);
         if ($stmt->execute()) {
@@ -92,13 +88,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Failed to add source.";
         }
     }
-    
+
     if (isset($_POST['delete_source'])) {
         $source_id = (int)$_POST['source_id'];
         $stmt = $conn->prepare("UPDATE parts SET source_id = NULL WHERE source_id = ?");
         $stmt->bind_param("i", $source_id);
         $stmt->execute();
-        
+
         $stmt = $conn->prepare("DELETE FROM affiliate_sources WHERE source_id = ?");
         $stmt->bind_param("i", $source_id);
         if ($stmt->execute()) {
@@ -106,23 +102,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-
 $pageTitle = "Admin Panel - ModMyCar";
 require_once 'includes/headerFooter.php';
 renderHeader();
 ?>
-
 <div class="container">
     <h2>Admin Panel</h2>
-    
+
     <?php if ($success): ?>
         <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
     <?php endif; ?>
-    
+
     <?php if ($error): ?>
         <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
     <?php endif; ?>
-
     <div class="admin-dashboard">
         <div class="admin-sidebar">
             <h3>Navigation</h3>
@@ -132,14 +125,13 @@ renderHeader();
                 <a href="?section=cars" class="<?php echo ($section === 'cars') ? 'active' : ''; ?>">Car Management</a>
                 <a href="?section=parts" class="<?php echo ($section === 'parts') ? 'active' : ''; ?>">Part Management</a>
                 <a href="?section=sources" class="<?php echo ($section === 'sources') ? 'active' : ''; ?>">Affiliate Sources</a>
+                <a href="?section=car_parts" class="<?php echo ($section === 'car_parts') ? 'active' : ''; ?>">Car Parts Visualization</a>
             </nav>
         </div>
-
         <div>
             <?php if ($section === 'database'): ?>
                 <h3>Database Visualization</h3>
                 <p style="margin-bottom: 20px; color: var(--text-secondary);">Real-time view of all database tables and their relationships. Auto-refreshes every 10 seconds.</p>
-
                 <div class="db-viz-container">
                     <!-- Entity Relationship Diagram -->
                     <div class="card" style="margin-bottom: 30px;">
@@ -148,7 +140,6 @@ renderHeader();
                             <svg id="erSvg" width="100%" height="600"></svg>
                         </div>
                     </div>
-
                     <!-- Table Statistics -->
                     <div class="db-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
                         <?php
@@ -166,7 +157,6 @@ renderHeader();
                             </div>
                         <?php endforeach; ?>
                     </div>
-
                     <!-- Detailed Table Views -->
                     <div class="card">
                         <h4>Table Details</h4>
@@ -184,7 +174,6 @@ renderHeader();
                                 'part_compatibility' => ['part_id', 'car_id'],
                                 'affiliate_sources' => ['source_id', 'source_name', 'base_url']
                             ];
-
                             foreach ($detailed_tables as $table => $columns):
                                 $result = $conn->query("SELECT * FROM $table ORDER BY " . $columns[0] . " DESC LIMIT 100");
                             ?>
@@ -225,31 +214,26 @@ renderHeader();
                             <?php endforeach; ?>
                         </div>
                     </div>
-
                     <!-- Relationship Metrics -->
                     <div class="card" style="margin-top: 30px;">
                         <h4>Database Relationships & Metrics</h4>
                         <div id="relationshipMetrics"></div>
                     </div>
                 </div>
-
                 <style>
                     .db-viz-container {
                         animation: fadeIn 0.5s;
                     }
-
                     @keyframes fadeIn {
                         from { opacity: 0; }
                         to { opacity: 1; }
                     }
-
                     .table-accordion-item {
                         border: 1px solid var(--border-color);
                         border-radius: 8px;
                         margin-bottom: 10px;
                         overflow: hidden;
                     }
-
                     .accordion-header {
                         width: 100%;
                         padding: 15px 20px;
@@ -263,48 +247,39 @@ renderHeader();
                         color: var(--text-primary);
                         transition: background 0.3s;
                     }
-
                     .accordion-header:hover {
                         background: var(--hover-bg);
                     }
-
                     .accordion-icon {
                         transition: transform 0.3s;
                         font-size: 0.8em;
                     }
-
                     .accordion-header.active .accordion-icon {
                         transform: rotate(-180deg);
                     }
-
                     .accordion-content {
                         max-height: 0;
                         overflow: hidden;
                         transition: max-height 0.3s ease-out;
                         background: var(--bg-primary);
                     }
-
                     .accordion-content.open {
                         max-height: 2000px;
                         padding: 20px;
                     }
-
                     .db-node {
                         cursor: pointer;
                         transition: all 0.3s;
                     }
-
                     .db-node:hover rect {
                         fill: #B91C1C;
                     }
-
                     .db-relationship {
                         stroke: #F97316;
                         stroke-width: 2;
                         fill: none;
                         marker-end: url(#arrowhead);
                     }
-
                     .metric-item {
                         padding: 15px;
                         border-left: 4px solid #DC2626;
@@ -312,28 +287,24 @@ renderHeader();
                         background: var(--card-bg);
                         border-radius: 4px;
                     }
-
                     .metric-item strong {
                         color: #DC2626;
                         font-size: 1.2em;
                     }
                 </style>
-
                 <script>
                     function toggleAccordion(tableId) {
                         const content = document.getElementById('accordion-' + tableId);
                         const header = content.previousElementSibling;
-                        
+
                         content.classList.toggle('open');
                         header.classList.toggle('active');
                     }
-
                     // Draw ER Diagram
                     function drawERDiagram() {
                         const svg = document.getElementById('erSvg');
                         const width = svg.clientWidth;
                         const height = 600;
-
                         // Define nodes (tables)
                         const nodes = [
                             { id: 'users', x: 150, y: 50, width: 120, height: 80, label: 'Users', color: '#DC2626' },
@@ -344,7 +315,6 @@ renderHeader();
                             { id: 'user_garages', x: 150, y: 250, width: 120, height: 80, label: 'User Garages', color: '#EC4899' },
                             { id: 'click_logs', x: 150, y: 450, width: 120, height: 80, label: 'Click Logs', color: '#F59E0B' }
                         ];
-
                         // Define relationships
                         const relationships = [
                             { from: 'user_garages', to: 'users', label: 'user_id' },
@@ -355,26 +325,22 @@ renderHeader();
                             { from: 'click_logs', to: 'parts', label: 'part_id' },
                             { from: 'click_logs', to: 'users', label: 'user_id' }
                         ];
-
                         let svgContent = '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#F97316" /></marker></defs>';
-
                         // Draw relationships first (so they appear behind nodes)
                         relationships.forEach(rel => {
                             const fromNode = nodes.find(n => n.id === rel.from);
                             const toNode = nodes.find(n => n.id === rel.to);
-                            
+
                             const x1 = fromNode.x + fromNode.width / 2;
                             const y1 = fromNode.y + fromNode.height / 2;
                             const x2 = toNode.x + toNode.width / 2;
                             const y2 = toNode.y + toNode.height / 2;
-
                             svgContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="db-relationship" />`;
-                            
+
                             const midX = (x1 + x2) / 2;
                             const midY = (y1 + y2) / 2;
                             svgContent += `<text x="${midX}" y="${midY - 5}" fill="#F97316" font-size="11" text-anchor="middle">${rel.label}</text>`;
                         });
-
                         // Draw nodes
                         nodes.forEach(node => {
                             svgContent += `
@@ -387,10 +353,8 @@ renderHeader();
                                 </g>
                             `;
                         });
-
                         svg.innerHTML = svgContent;
                     }
-
                     // Update metrics
                     function updateMetrics() {
                         fetch('get_db_metrics.php')
@@ -402,12 +366,11 @@ renderHeader();
                                 html += `<div class="metric-item"><strong>${data.users_with_garages}</strong> users have cars in their garage</div>`;
                                 html += `<div class="metric-item"><strong>${data.parts_with_clicks}</strong> parts have been clicked at least once</div>`;
                                 html += `<div class="metric-item"><strong>${data.avg_price}</strong> average part price</div>`;
-                                
+
                                 document.getElementById('relationshipMetrics').innerHTML = html;
                             })
                             .catch(err => console.error('Error loading metrics:', err));
                     }
-
                     // Auto-refresh data
                     function refreshData() {
                         // Refresh counts
@@ -419,37 +382,29 @@ renderHeader();
                                     new Intl.NumberFormat().format(data.count);
                             });
                         <?php endforeach; ?>
-
                         updateMetrics();
                     }
-
                     // Initialize
                     drawERDiagram();
                     updateMetrics();
                     setInterval(refreshData, 10000); // Refresh every 10 seconds
-
                     // Redraw diagram on window resize
                     window.addEventListener('resize', drawERDiagram);
                 </script>
-
             <?php elseif ($section === 'dashboard'): ?>
                 <h3>Analytics Dashboard</h3>
-
                 <div class="chart-container">
                     <h4>Total Clicks Over Time</h4>
                     <canvas id="clicksOverTimeChart"></canvas>
                 </div>
-
                 <div class="chart-container">
                     <h4>Clicks by Part Category</h4>
                     <canvas id="categoryPieChart"></canvas>
                 </div>
-
                 <div class="chart-container">
                     <h4>Top Clicked Parts</h4>
                     <canvas id="partsBarChart"></canvas>
                 </div>
-
                 <?php
                 $total_clicks = $conn->query("SELECT COUNT(*) as count FROM click_logs")->fetch_assoc()['count'];
                 $top_part = $conn->query("
@@ -461,7 +416,6 @@ renderHeader();
                     LIMIT 1
                 ")->fetch_assoc();
                 ?>
-
                 <div class="card">
                     <h4>Quick Stats</h4>
                     <p><strong>Total Clicks:</strong> <?php echo number_format($total_clicks); ?></p>
@@ -469,10 +423,8 @@ renderHeader();
                         <p><strong>Top Clicked Part:</strong> <?php echo htmlspecialchars($top_part['name']); ?> (<?php echo $top_part['clicks']; ?> clicks)</p>
                     <?php endif; ?>
                 </div>
-
             <?php elseif ($section === 'cars'): ?>
                 <h3>Car Management</h3>
-
                 <div class="card">
                     <h4>Add New Car</h4>
                     <form method="POST">
@@ -495,7 +447,6 @@ renderHeader();
                         <button type="submit" name="add_car" class="btn">Add Car</button>
                     </form>
                 </div>
-
                 <div class="card">
                     <h4>Existing Cars</h4>
                     <table>
@@ -531,10 +482,8 @@ renderHeader();
                         </tbody>
                     </table>
                 </div>
-
             <?php elseif ($section === 'parts'): ?>
                 <h3>Part Management</h3>
-
                 <div class="card">
                     <h4>Add New Part</h4>
                     <form method="POST">
@@ -600,7 +549,6 @@ renderHeader();
                         <button type="submit" name="add_part" class="btn">Add Part</button>
                     </form>
                 </div>
-
                 <div class="card">
                     <h4>Existing Parts</h4>
                     <table>
@@ -641,10 +589,8 @@ renderHeader();
                         </tbody>
                     </table>
                 </div>
-
             <?php elseif ($section === 'sources'): ?>
                 <h3>Affiliate Source Management</h3>
-
                 <div class="card">
                     <h4>Add New Affiliate Source</h4>
                     <form method="POST">
@@ -659,7 +605,6 @@ renderHeader();
                         <button type="submit" name="add_source" class="btn">Add Source</button>
                     </form>
                 </div>
-
                 <div class="card">
                     <h4>Existing Sources</h4>
                     <table>
@@ -691,11 +636,61 @@ renderHeader();
                         </tbody>
                     </table>
                 </div>
+            <?php elseif ($section === 'car_parts'): ?>
+                <h3>Car Parts Visualization</h3>
+                <div class="card">
+                    <h4>Select a Car</h4>
+                    <select id="carSelect" onchange="loadCarParts()">
+                        <option value="">Select a car</option>
+                        <?php
+                        $cars = $conn->query("SELECT * FROM cars ORDER BY brand, model, year");
+                        while ($car = $cars->fetch_assoc()):
+                        ?>
+                            <option value="<?php echo $car['car_id']; ?>"><?php echo htmlspecialchars($car['name']); ?></option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                <div id="carPartsVisualization" style="margin-top: 20px;">
+                    <!-- Visualization will be loaded here via JavaScript -->
+                </div>
+                <script>
+                function loadCarParts() {
+                    const carId = document.getElementById('carSelect').value;
+                    if (!carId) return;
+
+                    fetch(`?section=car_parts&car_id=${carId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            // Display the car and its parts
+                            let html = `<h4>${data.car.name}</h4>`;
+                            html += `<div style="display: flex; flex-wrap: wrap; gap: 10px;">`;
+                            data.parts.forEach(part => {
+                                html += `<div style="border: 1px solid #ccc; padding: 10px; border-radius: 5px;">${part.name}</div>`;
+                            });
+                            html += `</div>`;
+                            document.getElementById('carPartsVisualization').innerHTML = html;
+                        });
+                }
+                </script>
+                <?php
+                if (isset($_GET['car_id'])) {
+                    $car_id = (int)$_GET['car_id'];
+                    $car = $conn->query("SELECT * FROM cars WHERE car_id = $car_id")->fetch_assoc();
+                    $parts = $conn->query("
+                        SELECT p.*
+                        FROM parts p
+                        JOIN part_compatibility pc ON p.part_id = pc.part_id
+                        WHERE pc.car_id = $car_id
+                    ")->fetch_all(MYSQLI_ASSOC);
+                    header('Content-Type: application/json');
+                    echo json_encode(['car' => $car, 'parts' => $parts]);
+                    exit;
+                }
+                ?>
             <?php endif; ?>
         </div>
     </div>
 </div>
-
 <?php if ($section === 'dashboard'): ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -715,7 +710,6 @@ while ($row = $clicks_over_time->fetch_assoc()) {
 }
 $dates = array_reverse($dates);
 $counts = array_reverse($counts);
-
 $category_clicks = $conn->query("
     SELECT p.category, COUNT(*) as count 
     FROM click_logs cl 
@@ -728,7 +722,6 @@ while ($row = $category_clicks->fetch_assoc()) {
     $categories[] = $row['category'];
     $category_counts[] = $row['count'];
 }
-
 $top_parts = $conn->query("
     SELECT p.name, COUNT(*) as count 
     FROM click_logs cl 
@@ -744,7 +737,6 @@ while ($row = $top_parts->fetch_assoc()) {
     $part_counts[] = $row['count'];
 }
 ?>
-
 const ctx1 = document.getElementById('clicksOverTimeChart').getContext('2d');
 new Chart(ctx1, {
     type: 'line',
@@ -777,7 +769,6 @@ new Chart(ctx1, {
         }
     }
 });
-
 const ctx2 = document.getElementById('categoryPieChart').getContext('2d');
 new Chart(ctx2, {
     type: 'pie',
@@ -798,7 +789,6 @@ new Chart(ctx2, {
         }
     }
 });
-
 const ctx3 = document.getElementById('partsBarChart').getContext('2d');
 new Chart(ctx3, {
     type: 'bar',
@@ -831,5 +821,4 @@ new Chart(ctx3, {
 });
 </script>
 <?php endif; ?>
-
 <?php renderFooter(); ?>

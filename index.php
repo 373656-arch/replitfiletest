@@ -200,11 +200,12 @@ renderHeader();
 let buildParts = [];
 let currentCategory = 'all';
 function drag(event) {
-    event.dataTransfer.setData("partId", event.target.dataset.partId);
-    event.dataTransfer.setData("partName", event.target.dataset.name);
-    event.dataTransfer.setData("partPrice", event.dataTransfer.getData("partPrice"));
-    event.dataTransfer.setData("partCategory", event.target.dataset.category);
-}
+        event.dataTransfer.setData("partId", event.target.dataset.partId);
+        event.dataTransfer.setData("partName", event.target.dataset.name);
+        event.dataTransfer.setData("partPrice", event.target.dataset.price);
+        event.dataTransfer.setData("partCategory", event.target.dataset.category);
+    }
+
 function allowDrop(event) { event.preventDefault(); event.currentTarget.classList.add('drag-over'); }
 function dragLeave(event) { event.currentTarget.classList.remove('drag-over'); }
 function drop(event) {
