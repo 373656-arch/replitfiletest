@@ -21,7 +21,6 @@ function renderHeader() {
         <title><?php echo htmlspecialchars($pageTitle); ?></title>
         <link rel="stylesheet" href="/theme/style.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <audio id="loadingSound" src="/attached_assets/engine.mp3" preload="auto"></audio>
     </head>
     <body>
         <div class="page-loader">
@@ -104,15 +103,7 @@ function renderFooter() {
             const savedTheme = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', savedTheme);
             const loader = document.querySelector('.page-loader');
-            const loadingSound = document.getElementById('loadingSound');
             // Play sound only when the page first loads
-            window.addEventListener('DOMContentLoaded', function() {
-                loader.classList.add('active');
-                loadingSound.play();
-                setTimeout(() => {
-                    loader.classList.remove('active');
-                }, 300);
-            });
             const navLinks = document.querySelectorAll('header nav a');
             navLinks.forEach(link => {
                 link.addEventListener('click', function(e) {
