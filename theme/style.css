@@ -225,38 +225,64 @@ input:focus, select:focus, textarea:focus {
    6. BUILD AREA (App-like Interface)
    ========================================= */
 .build-area {
-    display: grid;
-    grid-template-columns: 350px 1fr;
+    display: flex;
     gap: 2rem;
-    margin-top: 2rem;
-    align-items: start;
 }
 
-.parts-panel {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 1.5rem;
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
-    position: sticky;
-    top: 100px;
+.parts-panel, .build-canvas {
+    flex: 1;
+    min-width: 0;
 }
 
-.parts-panel::-webkit-scrollbar {
-    width: 6px;
-}
-.parts-panel::-webkit-scrollbar-thumb {
-    background-color: var(--border-color);
-    border-radius: 3px;
-}
-
-.build-canvas {
-    background-color: var(--bg-secondary);
+.drop-zone {
     border: 2px dashed var(--border-color);
-    border-radius: 16px;
+    border-radius: 12px;
     padding: 2rem;
-    min-height: 600px;
+    text-align: center;
+    background: var(--bg-primary);
+    margin-bottom: 2rem;
+    transition: all 0.2s;
+}
+
+.drop-zone.drag-over {
+    border-color: var(--accent-1);
+    background: var(--bg-tertiary);
+}
+
+.category-dropdown {
+    position: relative;
+}
+
+.filter-icon-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    z-index: 1000;
+    min-width: 150px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.dropdown-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+    background: var(--bg-tertiary);
+    color: var(--accent-1);
 }
 
 .part-item {

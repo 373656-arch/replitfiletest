@@ -80,14 +80,6 @@ require_once 'includes/headerFooter.php';
 renderHeader();
 ?>
 <div class="container">
-    <style>
-        .build-area {
-            display: flex;
-        }
-        .parts-panel, .build-canvas {
-            width: 50%;
-        }
-    </style>
     <h2>Build Your Dream Car</h2>
 
     <?php if (isset($error)): ?>
