@@ -100,7 +100,7 @@ renderHeader();
 ?>
 
 <div class="container">
-    <div style="max-width: 600px; margin: 0 auto;">
+    <div class="max-w-600">
         <h2>Edit Profile</h2>
 
         <?php if ($error): ?>
@@ -155,10 +155,10 @@ renderHeader();
             </form>
         </div>
 
-        <div class="card" style="border-color: #ef4444;">
-            <h3 style="color: #ef4444;">Danger Zone</h3>
+        <div class="card border-danger">
+            <h3 class="text-danger">Danger Zone</h3>
             <p>Deleting your account is permanent and cannot be undone. All your builds will be removed.</p>
-            <button onclick="document.getElementById('deleteModal').classList.add('active')" class="btn" style="background: #ef4444;">Delete Account</button>
+            <button onclick="document.getElementById('deleteModal').classList.add('active')" class="btn bg-danger">Delete Account</button>
         </div>
     </div>
 </div>
@@ -173,7 +173,7 @@ renderHeader();
                 <label for="delete_password">Enter your password to confirm:</label>
                 <input type="password" id="delete_password" name="delete_password" required>
             </div>
-            <button type="submit" name="delete_account" class="btn" style="background: #ef4444;">Yes, Delete My Account</button>
+            <button type="submit" name="delete_account" class="btn bg-danger">Yes, Delete My Account</button>
             <button type="button" class="btn btn-secondary" onclick="document.getElementById('deleteModal').classList.remove('active')">Cancel</button>
         </form>
     </div>

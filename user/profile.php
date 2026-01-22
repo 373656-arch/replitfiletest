@@ -73,14 +73,14 @@ if ($show_confetti) {
         <?php if ($user['profileImage']): ?>
             <img src="<?php echo htmlspecialchars($user['profileImage']); ?>" alt="Profile" class="profile-image">
         <?php else: ?>
-            <div class="profileImage" style="background: var(--accent-1); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: white;">
+            <div class="profileImage profile-image-placeholder">
                 <?php echo strtoupper(substr($user['username'], 0, 1)); ?>
             </div>
         <?php endif; ?>
         <div>
             <h2><?php echo htmlspecialchars($user['username']); ?></h2>
             <p><?php echo htmlspecialchars($user['email']); ?></p>
-            <a href="editProfile.php" class="btn" style="margin-top: 1rem;">Edit Profile</a>
+            <a href="editProfile.php" class="btn mt-1">Edit Profile</a>
         </div>
     </div>
 
@@ -98,22 +98,22 @@ if ($show_confetti) {
                         <?php if ($build['featured_image']): ?>
                             <img src="<?php echo htmlspecialchars($build['featured_image']); ?>" alt="Build">
                         <?php else: ?>
-                            <div style="height: 250px; background: var(--bg-primary); display: flex; align-items: center; justify-content: center;">
+                            <div class="img-placeholder">
                                 <span>No Image</span>
                             </div>
                         <?php endif; ?>
                         <div class="build-card-content">
                             <h3><?php echo htmlspecialchars($build['build_title']); ?></h3>
                             <p><?php echo htmlspecialchars($build['car_name']); ?></p>
-                            <p class="price" style="color: var(--accent-1); font-weight: bold;">$<?php echo number_format($build['total_price'], 2); ?></p>
-                            <p style="font-size: 0.9rem; color: var(--text-primary); opacity: 0.8;">
+                            <p class="price price-bold">$<?php echo number_format($build['total_price'], 2); ?></p>
+                            <p class="text-muted">
                                 <?php echo $build['is_community_shared'] ? 'Shared with Community' : 'Private'; ?>
                             </p>
                             <div class="build-actions">
                                 <a href="/index.php?load_build=<?php echo $build['build_id']; ?>" class="btn btn-secondary">Edit</a>
-                                <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this build?');">
+                                <form method="POST" class="inline-form" onsubmit="return confirm('Are you sure you want to delete this build?');">
                                     <input type="hidden" name="build_id" value="<?php echo $build['build_id']; ?>">
-                                    <button type="submit" name="delete_build" class="btn" style="background: #ef4444;">Delete</button>
+                                    <button type="submit" name="delete_build" class="btn bg-danger">Delete</button>
                                 </form>
                             </div>
                         </div>
@@ -121,10 +121,10 @@ if ($show_confetti) {
                 <?php endwhile; ?>
             </div>
         <?php else: ?>
-            <div style="text-align: center; padding: 2rem; background: var(--bg-primary); border-radius: 5px;">
-                <p style="font-size: 1.1rem; color: var(--text-secondary);">Add your first part to start building</p>
-                <p style="margin-top: 0.5rem; color: var(--text-secondary); opacity: 0.8;">Create a custom car build by adding parts and components</p>
-                <a href="/index.php" style="color: var(--accent-2); margin-top: 1rem; display: inline-block; text-decoration: underline;">Start Building →</a>
+            <div class="empty-state">
+                <p class="empty-state-text">Add your first part to start building</p>
+                <p class="empty-state-subtext">Create a custom car build by adding parts and components</p>
+                <a href="/index.php" class="start-link">Start Building →</a>
             </div>
         <?php endif; ?>
     </div>
@@ -138,7 +138,7 @@ if ($show_confetti) {
                         <?php if ($build['featured_image']): ?>
                             <img src="<?php echo htmlspecialchars($build['featured_image']); ?>" alt="Build">
                         <?php else: ?>
-                            <div style="height: 250px; background: var(--bg-primary); display: flex; align-items: center; justify-content: center;">
+                            <div class="img-placeholder">
                                 <span>No Image</span>
                             </div>
                         <?php endif; ?>
@@ -146,7 +146,7 @@ if ($show_confetti) {
                             <h3><?php echo htmlspecialchars($build['build_title']); ?></h3>
                             <p>by <?php echo htmlspecialchars($build['creator_name']); ?></p>
                             <p><?php echo htmlspecialchars($build['car_name']); ?></p>
-                            <p class="price" style="color: var(--accent-1); font-weight: bold;">$<?php echo number_format($build['total_price'], 2); ?></p>
+                            <p class="price price-bold">$<?php echo number_format($build['total_price'], 2); ?></p>
                             <div class="build-actions">
                                 <a href="/community.php?build=<?php echo $build['build_id']; ?>" class="btn btn-secondary">View</a>
                             </div>
@@ -155,7 +155,7 @@ if ($show_confetti) {
                 <?php endwhile; ?>
             </div>
         <?php else: ?>
-            <p>You haven't saved any builds yet. <a href="/community.php" style="color: var(--accent-2);">Explore the community!</a></p>
+            <p>You haven't saved any builds yet. <a href="/community.php" class="accent-link">Explore the community!</a></p>
         <?php endif; ?>
     </div>
 </div>
@@ -249,17 +249,5 @@ createConfetti();
 animate();
 <?php endif; ?>
 </script>
-
-<style>
-#confetti-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 9999;
-}
-</style>
 
 <?php renderFooter(); ?>

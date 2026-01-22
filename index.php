@@ -102,8 +102,8 @@ renderHeader();
         <div class="build-area">
             <div class="parts-panel">
                 <h3>Available Parts</h3>
-                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.5rem;">
-                    <input type="text" id="searchParts" placeholder="Search parts..." onkeyup="filterParts()" style="flex: 1; margin-bottom: 0;">
+                <div class="flex-gap-center">
+                    <input type="text" id="searchParts" placeholder="Search parts..." onkeyup="filterParts()" class="flex-1 mb-0">
                     <div class="category-dropdown">
                         <button id="categoryBtn" class="filter-icon-btn" onclick="toggleCategoryDropdown()" title="Filter by category">☰</button>
                         <div id="categoryDropdown" class="dropdown-menu" style="display: none;">
@@ -147,19 +147,19 @@ renderHeader();
                     <p><strong>Car:</strong> <?php echo htmlspecialchars($selected_car['name']); ?></p>
                     <p><strong>Total Price:</strong> $<span id="totalPrice">0.00</span></p>
                     <p><strong>Parts Count:</strong> <span id="partsCount">0</span></p>
-                    <div id="compatibilityCheck" style="margin-top: 1rem; padding: 0.75rem; border-radius: 5px; font-weight: 500; display: none;">
+                    <div id="compatibilityCheck" class="compatibility-banner" style="display: none;">
                         <span id="compatibilityStatus"></span>
                     </div>
-                    <div id="similarBuildsContainer" style="display: none; margin-top: 1.5rem; padding: 1rem; background: var(--bg-primary); border-radius: 5px; border-left: 4px solid var(--accent-1);">
-                        <h5 style="margin-top: 0; margin-bottom: 0.75rem;">Similar Builds</h5>
+                    <div id="similarBuildsContainer" class="similar-builds-banner" style="display: none;">
+                        <h5 class="mt-0 mb-1">Similar Builds</h5>
                         <div id="similarBuildsList"></div>
                     </div>
-                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
-                        <button class="btn" onclick="generateShareableLink(this)" style="flex: 1; min-width: 150px;">Share Link</button>
+                    <div class="flex-wrap-gap">
+                        <button class="btn min-w-150" onclick="generateShareableLink(this)">Share Link</button>
                         <?php if (isLoggedIn()): ?>
-                            <button class="btn" onclick="showSaveModal()" style="flex: 1; min-width: 150px;">Save Build</button>
+                            <button class="btn min-w-150" onclick="showSaveModal()">Save Build</button>
                         <?php else: ?>
-                            <a href="/user/login.php" class="btn" style="flex: 1; min-width: 150px; text-align: center;">Login to Save</a>
+                            <a href="/user/login.php" class="btn min-w-150 text-center">Login to Save</a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -255,13 +255,13 @@ function updateBuildDisplay() {
     const buildPartsDiv = document.getElementById('buildParts');
     const totalPrice = buildParts.reduce((sum, part) => sum + parseFloat(part.price), 0);
     buildPartsDiv.innerHTML = buildParts.map((part, index) => `
-        <div style="background: var(--bg-primary); padding: 1rem; margin: 0.5rem 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+        <div class="build-item-row">
             <div>
                 <strong>${part.name}</strong>
-                <span style="color: var(--accent-1); margin-left: 1rem;">$${parseFloat(part.price).toFixed(2)}</span>
-                <span style="color: var(--accent-2); margin-left: 1rem; font-size: 0.9rem;">[${part.position}]</span>
+                <span class="price-bold ml-2">$${parseFloat(part.price).toFixed(2)}</span>
+                <span class="accent-link ml-2 fs-09">[${part.position}]</span>
             </div>
-            <button onclick="removePart(${index})" class="btn" style="background: #ef4444; padding: 0.5rem 1rem;">Remove</button>
+            <button onclick="removePart(${index})" class="btn bg-danger p-05-1">Remove</button>
         </div>`).join('');
     document.getElementById('totalPrice').textContent = totalPrice.toFixed(2);
     document.getElementById('partsCount').textContent = buildParts.length;
@@ -288,14 +288,14 @@ function fetchSimilarBuilds() {
         const list = document.getElementById('similarBuildsList');
         if (data.builds && data.builds.length > 0) {
             list.innerHTML = data.builds.map(build => `
-                <div style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 4px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <div class="similar-build-item">
                     <div>
-                        <p style="margin: 0; font-weight: 500; color: var(--text-primary);">${build.build_title}</p>
-                        <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">by ${build.username} • ${build.parts_count} parts • $${parseFloat(build.total_price).toFixed(2)}</p>
+                        <p class="m-0 fw-500 text-primary">${build.build_title}</p>
+                        <p class="mt-025 fs-085 text-secondary">by ${build.username} • ${build.parts_count} parts • $${parseFloat(build.total_price).toFixed(2)}</p>
                     </div>
-                    <div style="text-align: right;">
-                        <a href="/public_profile.php?username=${build.username}" style="color: var(--accent-2); font-size: 0.85rem; text-decoration: none; margin-right: 0.5rem;">by ${build.username}</a>
-                        <a href="/community.php?build=${build.build_id}" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">View</a>
+                    <div class="text-center">
+                        <a href="/public_profile.php?username=${build.username}" class="accent-link fs-085 mr-1">by ${build.username}</a>
+                        <a href="/community.php?build=${build.build_id}" class="btn p-05-1 fs-09">View</a>
                     </div>
                 </div>
             `).join('');

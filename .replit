@@ -1,7 +1,7 @@
 run = "php -S 0.0.0.0:8000 -t ."
 
 entrypoint = "index.php"
-modules = ["php-8.2", "web", "nix"]
+modules = ["nix", "nodejs-20", "php-8.2", "web"]
 
 [nix]
 channel = "stable-25_05"
@@ -13,6 +13,10 @@ deploymentTarget = "cloudrun"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
 
 [agent]
 expertMode = true

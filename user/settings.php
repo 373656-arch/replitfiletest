@@ -18,12 +18,12 @@ renderHeader();
     <div class="card">
         <h3>Theme Preference</h3>
         <p>Choose your preferred theme for the application.</p>
-        <div style="margin-top: 1rem;">
+        <div class="mt-1">
             <button class="btn" onclick="setTheme('light')">Light Theme</button>
-            <button class="btn" onclick="setTheme('dark')" style="margin-left: 0.5rem;">Dark Theme</button>
-            <button class="btn btn-secondary" onclick="toggleTheme()" style="margin-left: 0.5rem;">Toggle Theme</button>
+            <button class="btn ml-1" onclick="setTheme('dark')">Dark Theme</button>
+            <button class="btn btn-secondary ml-1" onclick="toggleTheme()">Toggle Theme</button>
         </div>
-        <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary);">Current theme: <strong id="current-theme">Dark</strong></p>
+        <p class="theme-status">Current theme: <strong id="current-theme">Dark</strong></p>
     </div>
 </div>
 

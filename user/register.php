@@ -51,7 +51,7 @@ renderHeader();
 ?>
 
 <div class="container">
-    <div class="card" style="max-width: 500px; margin: 2rem auto;">
+    <div class="card card-auth">
         <h2>Create Account</h2>
         
         <?php if ($error): ?>
@@ -82,7 +82,7 @@ renderHeader();
             <button type="submit" class="btn">Create Account</button>
         </form>
         
-        <p style="margin-top: 1rem;">Already have an account? <a href="login.php" style="color: var(--accent-2);">Sign in here</a></p>
+        <p class="auth-redirect">Already have an account? <a href="login.php" class="accent-link">Sign in here</a></p>
     </div>
 </div>
 
