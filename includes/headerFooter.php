@@ -30,8 +30,8 @@ function renderHeader() {
             </div>
         </div>
         <header>
-            <a href="/index.php" style="display: flex; align-items: center; text-decoration: none;">
-                <img src="/theme/logo.png" alt="ModMyCar" style="height: 40px; width: auto;">
+            <a href="/index.php" style="display: flex; align-items: center; text-decoration: none; color: inherit; font-weight: bold; font-size: 1.5rem; text-transform: lowercase;">
+                modmycar
             </a>
                         <nav>
                             <?php if ($currentUser): ?>
