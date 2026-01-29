@@ -1,7 +1,7 @@
 run = "php -S 0.0.0.0:8000 -t ."
 
 entrypoint = "index.php"
-modules = ["nix", "nodejs-20", "php-8.2", "web"]
+modules = ["php-8.2", "web", "nix"]
 
 [nix]
 channel = "stable-25_05"
