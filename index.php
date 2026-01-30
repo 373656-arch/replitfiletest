@@ -35,9 +35,9 @@ if ($selected_car_id) {
     $stmt->execute();
     $selected_car = $stmt->get_result()->fetch_assoc();
 
-    // Fetch all parts
     $query = "SELECT p.*, a.base_url FROM parts p LEFT JOIN affiliate_sources a ON p.source_id = a.source_id ORDER BY p.category, p.name";
-    $parts = $conn->query($query)->fetch_all(MYSQLI_ASSOC);
+    $parts_result = $conn->query($query);
+    $parts = $parts_result ? $parts_result->fetch_all(MYSQLI_ASSOC) : [];
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
