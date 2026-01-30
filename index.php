@@ -35,6 +35,7 @@ if ($selected_car_id) {
     $stmt->execute();
     $selected_car = $stmt->get_result()->fetch_assoc();
 
+    // Fetch all parts
     $query = "SELECT p.*, a.base_url FROM parts p LEFT JOIN affiliate_sources a ON p.source_id = a.source_id ORDER BY p.category, p.name";
     $parts = $conn->query($query)->fetch_all(MYSQLI_ASSOC);
 }
@@ -66,27 +67,40 @@ renderHeader();
 ?>
 
 <style>
+    /* Status Styles */
     .incompatible-badge { color: #ff4d4d; font-size: 0.8rem; font-weight: bold; margin-left: 10px; }
     .summary-warning { color: #ff4d4d; font-weight: bold; margin-top: 5px; display: none; }
     .build-item-row.is-incompatible { border-left: 3px solid #ff4d4d; background: rgba(255, 77, 77, 0.1); }
 
-    .btn:disabled {
-        background-color: #444 !important;
-        color: #888 !important;
-        cursor: not-allowed;
-        opacity: 0.6;
-    }
+    /* Button Styles */
+    .btn:disabled { background-color: #444 !important; color: #888 !important; cursor: not-allowed; opacity: 0.6; }
+    .btn-outline-danger { background: transparent; border: 1px solid #ff4d4d; color: #ff4d4d; margin-top: 10px; }
+    .btn-outline-danger:hover { background: #ff4d4d; color: #fff; }
 
-    .btn-outline-danger {
-        background: transparent;
-        border: 1px solid #ff4d4d;
-        color: #ff4d4d;
-        margin-top: 10px;
+    /* Filter Toolbar Styles */
+    .filters-toolbar { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
+    .search-input { flex: 1; margin-bottom: 0; } /* Overwrite default mb */
+
+    /* Toggle Switch Style */
+    .toggle-container { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; user-select: none; }
+    .toggle-switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 20px; }
+    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: #2196F3; }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    /* Dropdown Styles */
+    .category-dropdown { position: relative; }
+    .filter-icon-btn { background: #333; border: 1px solid #555; color: #fff; padding: 8px 12px; cursor: pointer; border-radius: 4px; }
+    .dropdown-menu {
+        position: absolute; right: 0; top: 100%; z-index: 10;
+        background: #222; border: 1px solid #444; border-radius: 4px;
+        min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
-    .btn-outline-danger:hover {
-        background: #ff4d4d;
-        color: #fff;
-    }
+    .dropdown-item { padding: 10px; cursor: pointer; color: #ddd; border-bottom: 1px solid #333; }
+    .dropdown-item:hover { background: #333; color: #fff; }
+    .dropdown-item:last-child { border-bottom: none; }
 </style>
 
 <div class="container">
@@ -110,7 +124,33 @@ renderHeader();
         <div class="build-area">
             <div class="parts-panel">
                 <h3>Available Parts</h3>
-                <input type="text" id="searchParts" placeholder="Search parts..." onkeyup="filterParts()">
+
+                <div class="filters-toolbar">
+                    <input type="text" id="searchParts" class="search-input" placeholder="Search parts..." onkeyup="filterParts()">
+
+                    <div class="category-dropdown">
+                        <button id="categoryBtn" class="filter-icon-btn" onclick="toggleCategoryDropdown()" title="Filter by category">☰</button>
+                        <div id="categoryDropdown" class="dropdown-menu" style="display: none;">
+                            <div class="dropdown-item" onclick="selectCategory('all')">All Categories</div>
+                            <div class="dropdown-item" onclick="selectCategory('Exhaust')">Exhaust</div>
+                            <div class="dropdown-item" onclick="selectCategory('Intake')">Intake</div>
+                            <div class="dropdown-item" onclick="selectCategory('Suspension')">Suspension</div>
+                            <div class="dropdown-item" onclick="selectCategory('Wheels')">Wheels</div>
+                            <div class="dropdown-item" onclick="selectCategory('Tires')">Tires</div>
+                            <div class="dropdown-item" onclick="selectCategory('Brakes')">Brakes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label class="toggle-container">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="compatibleToggle" onchange="toggleCompatibilityFilter()">
+                            <span class="slider"></span>
+                        </div>
+                        <span>Show Compatible Only</span>
+                    </label>
+                </div>
 
                 <div id="partsList">
                     <?php foreach ($parts as $part): ?>
@@ -171,18 +211,25 @@ renderHeader();
 </div>
 
 <script>
+// --- Global State ---
 let buildParts = [];
+let currentCategory = 'all';
+let showCompatibleOnly = false;
 
+// --- Car Data (Passed from PHP) ---
+const carData = {
+    year: <?= (int)$selected_car['year']; ?>,
+    engine: "<?= $selected_car['engine_code']; ?>",
+    chassis: "<?= $selected_car['chassis_code']; ?>"
+};
+
+// --- Drag & Drop ---
 function drag(event) {
     const d = event.target.dataset;
-    event.dataTransfer.setData("partId", d.partId);
-    event.dataTransfer.setData("partName", d.name);
-    event.dataTransfer.setData("partPrice", d.price);
-    event.dataTransfer.setData("partCategory", d.category);
-    event.dataTransfer.setData("partEngine", d.engine);
-    event.dataTransfer.setData("partChassis", d.chassis);
-    event.dataTransfer.setData("yearStart", d.yearStart);
-    event.dataTransfer.setData("yearEnd", d.yearEnd);
+    // Set all data needed for transfer
+    for (let key in d) {
+        event.dataTransfer.setData(key, d[key]);
+    }
 }
 
 function allowDrop(event) { event.preventDefault(); event.currentTarget.classList.add('drag-over'); }
@@ -192,25 +239,21 @@ function drop(event) {
     event.preventDefault();
     event.currentTarget.classList.remove('drag-over');
 
+    // Retrieve data using lowercase keys (dataset converts CamelCase to lowercase in getData if not careful, 
+    // but here we manually set them in drag(). Let's grab them safely.)
     const d = {
         id: event.dataTransfer.getData("partId"),
-        name: event.dataTransfer.getData("partName"),
-        price: parseFloat(event.dataTransfer.getData("partPrice")),
-        category: event.dataTransfer.getData("partCategory"),
-        engine: event.dataTransfer.getData("partEngine"),
-        chassis: event.dataTransfer.getData("partChassis"),
+        name: event.dataTransfer.getData("name"), // Note: dataset.name maps to data-name
+        price: parseFloat(event.dataTransfer.getData("price")),
+        category: event.dataTransfer.getData("category"),
+        engine: event.dataTransfer.getData("engine"),
+        chassis: event.dataTransfer.getData("chassis"),
         yStart: parseInt(event.dataTransfer.getData("yearStart")),
         yEnd: parseInt(event.dataTransfer.getData("yearEnd"))
     };
 
-    const carYear = <?= (int)$selected_car['year']; ?>;
-    const carEngine = "<?= $selected_car['engine_code']; ?>";
-    const carChassis = "<?= $selected_car['chassis_code']; ?>";
-
-    let isCompatible = true;
-    if (d.engine && d.engine !== carEngine) isCompatible = false;
-    if (d.chassis && d.chassis !== carChassis) isCompatible = false;
-    if (carYear < d.yStart || carYear > d.yEnd) isCompatible = false;
+    // Check compatibility using the helper
+    const isCompatible = checkPartCompatibility(d.engine, d.chassis, d.yStart, d.yEnd);
 
     const slotMap = { 'Exhaust': 'exhaust', 'Intake': 'intake', 'Suspension': 'suspension', 'Wheels': 'wheels' };
 
@@ -223,9 +266,18 @@ function drop(event) {
     });
 
     updateBuildDisplay();
-    updatePartsList();
+    updatePartsList(); // Refresh list to hide added parts
 }
 
+// --- Helper: Check Compatibility ---
+function checkPartCompatibility(pEngine, pChassis, pStart, pEnd) {
+    if (pEngine && pEngine !== carData.engine) return false;
+    if (pChassis && pChassis !== carData.chassis) return false;
+    if (carData.year < pStart || carData.year > pEnd) return false;
+    return true;
+}
+
+// --- UI Updates ---
 function updateBuildDisplay() {
     const buildPartsDiv = document.getElementById('buildParts');
     const totalPrice = buildParts.reduce((sum, p) => sum + p.price, 0);
@@ -254,7 +306,6 @@ function updateBuildDisplay() {
         saveBtn.disabled = false;
     }
 
-    // Toggle Clear All Button
     clearBtn.style.display = buildParts.length > 0 ? 'block' : 'none';
 }
 
@@ -272,20 +323,68 @@ function clearAllParts() {
     }
 }
 
-function updatePartsList() {
-    const usedIds = new Set(buildParts.map(p => p.part_id));
-    document.querySelectorAll('.part-item').forEach(p => {
-        p.style.display = usedIds.has(p.dataset.partId) ? 'none' : 'block';
-    });
+// --- Filters & Toggles ---
+function toggleCategoryDropdown() {
+    const dropdown = document.getElementById('categoryDropdown');
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+
+    // Auto-close on outside click
+    if (dropdown.style.display === 'block') {
+        setTimeout(() => document.addEventListener('click', closeDropdownOnClickOutside), 0);
+    }
+}
+
+function closeDropdownOnClickOutside(event) {
+    const dropdown = document.getElementById('categoryDropdown');
+    const btn = document.getElementById('categoryBtn');
+    if (!dropdown.contains(event.target) && event.target !== btn) {
+        dropdown.style.display = 'none';
+        document.removeEventListener('click', closeDropdownOnClickOutside);
+    }
+}
+
+function selectCategory(category) {
+    currentCategory = category;
+    document.getElementById('categoryDropdown').style.display = 'none';
+    filterParts();
+}
+
+function toggleCompatibilityFilter() {
+    showCompatibleOnly = document.getElementById('compatibleToggle').checked;
+    filterParts();
 }
 
 function filterParts() {
-    const s = document.getElementById('searchParts').value.toLowerCase();
-    document.querySelectorAll('.part-item').forEach(p => {
-        p.style.display = p.dataset.name.toLowerCase().includes(s) ? 'block' : 'none';
+    const searchTerm = document.getElementById('searchParts').value.toLowerCase();
+    const usedIds = new Set(buildParts.map(p => p.part_id)); // Used parts are always hidden
+
+    document.querySelectorAll('.part-item').forEach(part => {
+        const d = part.dataset;
+
+        // 1. Check if already in build (Always hide)
+        if (usedIds.has(d.partId)) {
+            part.style.display = 'none';
+            return;
+        }
+
+        // 2. Check Name Search
+        const matchesSearch = d.name.toLowerCase().includes(searchTerm);
+
+        // 3. Check Category
+        const matchesCategory = (currentCategory === 'all' || d.category === currentCategory);
+
+        // 4. Check Compatibility (Only if toggle is ON)
+        let matchesCompat = true;
+        if (showCompatibleOnly) {
+            matchesCompat = checkPartCompatibility(d.engine, d.chassis, parseInt(d.yearStart), parseInt(d.yearEnd));
+        }
+
+        // Final Visibility Decision
+        part.style.display = (matchesSearch && matchesCategory && matchesCompat) ? 'block' : 'none';
     });
 }
 
+// --- Save Modal ---
 function showSaveModal() { 
     if(document.getElementById('saveBuildBtn').disabled) return;
     document.getElementById('saveModal').classList.add('active'); 
