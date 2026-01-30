@@ -113,7 +113,14 @@ renderHeader();
                     </div>
 
                     <div style="display: flex; gap: 15px;">
-                        <div class="form-group" style="flex: 1;"><label>Price ($)</label><input type="number" step="0.01" name="price" required></div>
+                        <div class="form-group" style="flex: 1;"><label>Price ($)</label><input 
+                            type="number" 
+                            step="0.01" 
+                            min="0" 
+                            name="price" 
+                            required
+                        >
+</div>
                         <div class="form-group" style="flex: 1;">
                             <label>Category</label>
                             <select name="category">
