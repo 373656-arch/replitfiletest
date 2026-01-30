@@ -344,13 +344,15 @@ renderHeader();
             $parts = $stmt->get_result();
             ?>
             <?php while ($part = $parts->fetch_assoc()): ?>
-                <div style="background: var(--bg-primary); padding: 1rem; margin: 0.5rem 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <strong><?php echo htmlspecialchars($part['name']); ?></strong>
-                        <span style="color: var(--accent-1); margin-left: 1rem;">$<?php echo number_format((float)$part['price'], 2); ?></span>
-                        <span style="color: var(--accent-2); margin-left: 1rem; font-size: 0.9rem;">[<?php echo htmlspecialchars($part['position_data']); ?>]</span>
+                <div style="background: var(--bg-primary); padding: 1rem; margin: 0.5rem 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--accent-1);">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <strong style="font-size: 1.1rem; color: #fff;"><?php echo htmlspecialchars($part['name']); ?></strong>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: var(--accent-1); font-weight: bold;">$<?php echo number_format((float)$part['price'], 2); ?></span>
+                            <span style="color: #888; font-size: 0.85rem; text-transform: uppercase;">[<?php echo htmlspecialchars($part['position_data']); ?>]</span>
+                        </div>
                     </div>
-                    <a href="/redirect.php?part_id=<?php echo (int)$part['part_id']; ?>" target="_blank" class="btn btn-secondary">View Product</a>
+                    <a href="/redirect.php?part_id=<?php echo (int)$part['part_id']; ?>" target="_blank" class="btn" style="min-width: 150px; text-align: center; background: transparent; border: 1px solid var(--accent-2); color: #fff; transition: all 0.3s ease;">VIEW PRODUCT</a>
                 </div>
             <?php endwhile; ?>
         </div>
