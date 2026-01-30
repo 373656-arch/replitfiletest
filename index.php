@@ -101,6 +101,23 @@ renderHeader();
     .dropdown-item { padding: 10px; cursor: pointer; color: #ddd; border-bottom: 1px solid #333; }
     .dropdown-item:hover { background: #333; color: #fff; }
     .dropdown-item:last-child { border-bottom: none; }
+    
+    .part-item { position: relative; }
+    .affiliate-link {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        color: #2196F3;
+        background: rgba(0,0,0,0.6);
+        padding: 5px;
+        border-radius: 4px;
+        line-height: 0;
+        transition: color 0.2s;
+        z-index: 2;
+    }
+    .affiliate-link:hover { color: #fff; background: #2196F3; }
+    .affiliate-link-mini { color: #2196F3; line-height: 0; display: flex; align-items: center; }
+    .affiliate-link-mini:hover { color: #fff; }
 </style>
 
 <div class="container">
@@ -163,6 +180,7 @@ renderHeader();
                              data-chassis="<?= htmlspecialchars($part['chassis_code'] ?? ''); ?>"
                              data-year-start="<?= $part['year_start'] ?? 0; ?>"
                              data-year-end="<?= $part['year_end'] ?? 9999; ?>"
+                             data-link="<?= htmlspecialchars($part['base_url'] . ($part['affiliate_id'] ?? '')); ?>"
                              draggable="true"
                              ondragstart="drag(event)">
                             <?php if ($part['image']): ?>
@@ -170,6 +188,13 @@ renderHeader();
                             <?php endif; ?>
                             <h4><?= htmlspecialchars($part['name']); ?></h4>
                             <p class="price">$<?= number_format($part['price'], 2); ?></p>
+                            <?php if (!empty($part['base_url'])): ?>
+                                <a href="<?= htmlspecialchars($part['base_url'] . ($part['affiliate_id'] ?? '')); ?>" target="_blank" class="affiliate-link" title="View on Store" onclick="event.stopPropagation();">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-left-square" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd" d="M15 2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1zM0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm10.096 8.803a.5.5 0 1 0 .707-.707L6.707 6h2.768a.5.5 0 1 0 0-1H5.5a.5.5 0 0 0-.5.5v3.975a.5.5 0 0 0 1 0V6.707z"/>
+                                    </svg>
+                                </a>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -245,6 +270,7 @@ function drop(event) {
         id: event.dataTransfer.getData("partId"),
         name: event.dataTransfer.getData("name"), // Note: dataset.name maps to data-name
         price: parseFloat(event.dataTransfer.getData("price")),
+        link: event.dataTransfer.getData("link"),
         category: event.dataTransfer.getData("category"),
         engine: event.dataTransfer.getData("engine"),
         chassis: event.dataTransfer.getData("chassis"),
@@ -261,6 +287,7 @@ function drop(event) {
         part_id: d.id, 
         name: d.name, 
         price: d.price, 
+        link: d.link,
         position: slotMap[d.category] || 'general',
         isCompatible: isCompatible 
     });
@@ -287,11 +314,21 @@ function updateBuildDisplay() {
 
     buildPartsDiv.innerHTML = buildParts.map((p, i) => `
         <div class="build-item-row ${!p.isCompatible ? 'is-incompatible' : ''}">
-            <span>
-                <strong>${p.name}</strong> ($${p.price.toFixed(2)})
-                ${!p.isCompatible ? '<span class="incompatible-badge">✕ Incompatible</span>' : ''}
-            </span>
-            <button onclick="removePart(${i})">×</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span>
+                    <strong>${p.name}</strong> ($${p.price.toFixed(2)})
+                    ${!p.isCompatible ? '<span class="incompatible-badge">✕ Incompatible</span>' : ''}
+                </span>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    ${p.link ? `
+                        <a href="${p.link}" target="_blank" class="affiliate-link-mini" title="View on Store">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M15 2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1zM0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm10.096 8.803a.5.5 0 1 0 .707-.707L6.707 6h2.768a.5.5 0 1 0 0-1H5.5a.5.5 0 0 0-.5.5v3.975a.5.5 0 0 0 1 0V6.707z"/>
+                            </svg>
+                        </a>` : ''}
+                    <button onclick="removePart(${i})" style="background:none; border:none; color:#ff4d4d; cursor:pointer; font-size:1.2rem;">×</button>
+                </div>
+            </div>
         </div>`).join('');
 
     document.getElementById('totalPrice').textContent = totalPrice.toFixed(2);
