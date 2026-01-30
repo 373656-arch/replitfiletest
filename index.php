@@ -118,6 +118,9 @@ renderHeader();
     .affiliate-link:hover { color: #fff; background: #2196F3; }
     .affiliate-link-mini { color: #2196F3; line-height: 0; display: flex; align-items: center; }
     .affiliate-link-mini:hover { color: #fff; }
+    
+    /* Ensure icon visibility in the card */
+    .part-item h4 { margin-right: 35px; } /* Make room for the top-right icon */
 </style>
 
 <div class="container">
