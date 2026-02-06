@@ -1,5 +1,24 @@
 <?php
 require_once 'config.php';
+
+// --- PROFANITY FILTER CONFIGURATION ---
+// EDIT THIS LIST: Add words you want to block inside the array.
+function containsProfanity($text) {
+    $banned_words = [
+        'badword', 'offensive', 'spam', 'scam', 'hate', 'stupid', 'idiot', 
+        'garbage', 'trash', 'fake', 'dummy' 
+        // Add more words here as needed
+    ]; 
+
+    foreach ($banned_words as $word) {
+        // checks case-insensitive
+        if (stripos($text, $word) !== false) {
+            return true;
+        }
+    }
+    return false;
+}
+
 if (!isLoggedIn()) {
     header('Location: /user/login.php');
     exit;
@@ -15,22 +34,67 @@ $success = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // --- CAR MANAGEMENT ---
+    // --- CAR MANAGEMENT (Updated) ---
     if (isset($_POST['add_car'])) {
+
+        // 1. Collect & Sanitize
+        $name = trim($_POST['name']);
         $brand = trim($_POST['brand']);
         $model = trim($_POST['model']);
         $year = (int)$_POST['year'];
-        $name = "$year $brand $model";
-        $image = trim($_POST['image'] ?? '');
+        $trim_level = trim($_POST['trim_level'] ?? '');
         $engine_code = trim($_POST['engine_code'] ?? '');
         $chassis_code = trim($_POST['chassis_code'] ?? '');
 
-        $stmt = $conn->prepare("INSERT INTO cars (brand, model, year, name, image, engine_code, chassis_code) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssissss", $brand, $model, $year, $name, $image, $engine_code, $chassis_code);
-        if ($stmt->execute()) { $success = "Car added!"; }
+        // 2. Profanity Check
+        if (containsProfanity($name) || containsProfanity($brand) || containsProfanity($model) || containsProfanity($trim_level)) {
+            $error = "Error: Submission blocked due to prohibited language.";
+        } else {
+            // 3. File Upload Handling
+            $imagePath = '';
+
+            // Check if a file was actually uploaded without errors
+            if (isset($_FILES['car_image']) && $_FILES['car_image']['error'] === 0) {
+                $uploadDir = 'uploads/'; // Local folder
+
+                // Create folder if it doesn't exist
+                if (!is_dir($uploadDir)) { mkdir($uploadDir, 0777, true); }
+
+                // Generate unique name to prevent overwriting
+                $fileName = time() . '_' . basename($_FILES['car_image']['name']);
+                $targetFile = $uploadDir . $fileName;
+
+                // Validate File Type
+                $fileType = strtolower(pathinfo($targetFile, PATHINFO_EXTENSION));
+                $allowedTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+                if (in_array($fileType, $allowedTypes)) {
+                    if (move_uploaded_file($_FILES['car_image']['tmp_name'], $targetFile)) {
+                        $imagePath = $targetFile; // This path goes into DB
+                    } else {
+                        $error = "Failed to save the uploaded file.";
+                    }
+                } else {
+                    $error = "Invalid file type. Only JPG, PNG, GIF, WEBP allowed.";
+                }
+            }
+
+            // 4. Database Insert (Only if no errors so far)
+            if (empty($error)) {
+                $stmt = $conn->prepare("INSERT INTO cars (brand, model, year, name, trim_level, image, engine_code, chassis_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                // "image" column gets the file path now
+                $stmt->bind_param("ssisssss", $brand, $model, $year, $name, $trim_level, $imagePath, $engine_code, $chassis_code);
+
+                if ($stmt->execute()) { 
+                    $success = "Car added successfully!"; 
+                } else {
+                    $error = "Database Error: " . $conn->error;
+                }
+            }
+        }
     }
 
-    // --- PART MANAGEMENT ---
+    // --- PART MANAGEMENT (UNCHANGED) ---
     if (isset($_POST['add_part'])) {
         $name = trim($_POST['name']);
         $price = (float)$_POST['price'];
@@ -57,7 +121,7 @@ renderHeader();
 ?>
 
 <style>
-    /* Admin Specific Styling to fix visibility issues */
+    /* Admin Specific Styling */
     .admin-container { display: flex; gap: 30px; margin-top: 20px; color: #fff; }
     .admin-sidebar { width: 250px; background: #1a1a2e; padding: 20px; border-radius: 8px; height: fit-content; }
     .admin-sidebar h3 { margin-bottom: 20px; color: #00d4ff; border-bottom: 1px solid #333; padding-bottom: 10px; }
@@ -72,14 +136,27 @@ renderHeader();
     .form-group label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.9rem; }
     input, select, textarea { width: 100%; padding: 12px; background: #0f3460; border: 1px solid #1a1a2e; color: #fff; border-radius: 4px; }
 
-    /* FIX FOR THE "INVISIBLE" BOX */
-    .smart-rules-box { 
+    /* Layout for Car Management */
+    .car-split-view { display: flex; gap: 25px; }
+
+    /* LEFT SIDE: INSTRUCTIONS */
+    .car-instructions { 
+        flex: 1; 
         background: #0f3460; 
         padding: 20px; 
         border-radius: 8px; 
-        margin: 20px 0; 
-        border: 1px dashed #00d4ff; 
+        border-left: 3px solid #00d4ff; 
+        height: fit-content;
     }
+    .car-instructions h4 { color: #00d4ff; margin-top: 0; margin-bottom: 15px; }
+    .car-instructions p { font-size: 0.9rem; color: #ccc; line-height: 1.6; margin-bottom: 10px; }
+    .car-instructions strong { color: #fff; }
+
+    /* RIGHT SIDE: FORM INPUTS */
+    .car-form-area { flex: 2; }
+
+    /* Smart Rules Box Styling (reused) */
+    .smart-rules-box { background: #0f3460; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px dashed #00d4ff; }
     .smart-rules-box h5 { color: #00d4ff; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
 
     .btn { background: #00d4ff; color: #000; border: none; padding: 12px 25px; font-weight: bold; cursor: pointer; border-radius: 4px; width: 100%; }
@@ -102,8 +179,106 @@ renderHeader();
 
     <main class="admin-main">
         <?php if ($success): ?> <div style="background: #28a745; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;"><?= $success ?></div> <?php endif; ?>
+        <?php if ($error): ?> <div style="background: #dc3545; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;"><?= $error ?></div> <?php endif; ?>
 
-        <?php if ($section === 'parts'): ?>
+        <?php if ($section === 'cars'): ?>
+
+            <div class="card">
+                <h2>Add New Car</h2>
+
+                <div class="car-split-view">
+                    <div class="car-instructions">
+                        <h4>Instructions</h4>
+                        <p><strong>Step 1:</strong> Type the full car name in the top box using the format: <br><em>"Year Brand Model"</em>.</p>
+                        <p><strong>Example:</strong> <br><span style="color:#00d4ff">2021 BMW M340i</span></p>
+                        <p>The system will try to auto-fill the Year, Brand, and Model boxes below.</p>
+                        <p><strong>Step 2:</strong> Verify the auto-filled data. You can edit the boxes if they are incorrect.</p>
+                        <p><strong>Step 3:</strong> Manually enter the Chassis Code, Engine Code, and Trim Level.</p>
+                        <p><strong>Step 4:</strong> Upload a valid image file (JPG, PNG).</p>
+                        <p style="font-size: 0.8rem; margin-top: 15px; color: #888;">* Offensive language will be blocked automatically.</p>
+                    </div>
+
+                    <div class="car-form-area">
+                        <form method="POST" enctype="multipart/form-data">
+
+                            <div class="form-group">
+                                <label style="color: #00d4ff; font-weight: bold;">New Car Model Here</label>
+                                <input 
+                                    type="text" 
+                                    id="mainInput" 
+                                    name="name" 
+                                    placeholder="e.g. 2021 BMW M340i" 
+                                    required 
+                                    onkeyup="attemptAutoFill()"
+                                >
+                            </div>
+
+                            <div style="display: flex; gap: 15px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label>Year</label>
+                                    <input type="number" id="year" name="year" placeholder="YYYY" required>
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label>Brand</label>
+                                    <input type="text" id="brand" name="brand" placeholder="Brand">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label>Model</label>
+                                    <input type="text" id="model" name="model" placeholder="Model">
+                                </div>
+                            </div>
+
+                            <div class="smart-rules-box">
+                                <h5>Technical Specs</h5>
+                                <div style="display: flex; gap: 15px;">
+                                    <div class="form-group" style="flex: 1;">
+                                        <label>Engine Code</label>
+                                        <input type="text" name="engine_code" placeholder="e.g. B58">
+                                    </div>
+                                    <div class="form-group" style="flex: 1;">
+                                        <label>Chassis Code</label>
+                                        <input type="text" name="chassis_code" placeholder="e.g. G20">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Trim Level</label>
+                                    <input type="text" name="trim_level" placeholder="e.g. M-Sport, Premium">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Car Image (Upload File)</label>
+                                <input type="file" name="car_image" accept="image/*" required>
+                            </div>
+
+                            <button type="submit" name="add_car" class="btn">Add Car</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                function attemptAutoFill() {
+                    const input = document.getElementById('mainInput').value;
+                    const yearBox = document.getElementById('year');
+                    const brandBox = document.getElementById('brand');
+                    const modelBox = document.getElementById('model');
+
+                    // Regex looks for: Start -> 4 digits (Year) -> Space -> One Word (Brand) -> Space -> Rest (Model)
+                    // Example: "2021 BMW M340i"
+                    const regex = /^(\d{4})\s+([A-Za-z0-9]+)\s+(.*)$/;
+                    const match = input.match(regex);
+
+                    if (match) {
+                        yearBox.value = match[1];  // 2021
+                        brandBox.value = match[2]; // BMW
+                        modelBox.value = match[3]; // M340i
+                    }
+                    // We do NOT clear the boxes if regex fails, so the user can manually type without fighting the script.
+                }
+            </script>
+
+        <?php elseif ($section === 'parts'): ?>
             <div class="card">
                 <h2>Add New Part</h2>
                 <form method="POST">
@@ -113,14 +288,7 @@ renderHeader();
                     </div>
 
                     <div style="display: flex; gap: 15px;">
-                        <div class="form-group" style="flex: 1;"><label>Price ($)</label><input 
-                            type="number" 
-                            step="0.01" 
-                            min="0" 
-                            name="price" 
-                            required
-                        >
-</div>
+                        <div class="form-group" style="flex: 1;"><label>Price ($)</label><input type="number" step="0.01" min="0" name="price" required></div>
                         <div class="form-group" style="flex: 1;">
                             <label>Category</label>
                             <select name="category">
