@@ -34,6 +34,19 @@ $success = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    // --- MESSAGE MANAGEMENT ---
+    if (isset($_POST['delete_message'])) {
+        $msg_id = (int)$_POST['message_id'];
+        $stmt = $conn->prepare("DELETE FROM admin_messages WHERE message_id = ?");
+        $stmt->bind_param("i", $msg_id);
+        if ($stmt->execute()) {
+            $success = "Message deleted successfully.";
+        } else {
+            $error = "Failed to delete message.";
+        }
+    }
+
     // --- CAR MANAGEMENT (Updated) ---
     if (isset($_POST['add_car'])) {
 
@@ -164,6 +177,12 @@ renderHeader();
 
     .compat-list { background: #0f3460; max-height: 200px; overflow-y: auto; padding: 10px; border-radius: 4px; }
     .compat-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; }
+
+    /* Message Cards */
+    .message-card { background: #0f3460; padding: 20px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #00d4ff; }
+    .message-header { display: flex; justify-content: space-between; border-bottom: 1px solid #1a1a2e; padding-bottom: 10px; margin-bottom: 15px; }
+    .btn-danger { background: #dc3545; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+    .btn-danger:hover { background: #c82333; }
 </style>
 
 <div class="container admin-container">
@@ -171,6 +190,7 @@ renderHeader();
         <h3>Navigation</h3>
         <nav class="admin-nav">
             <a href="?section=dashboard" class="<?= $section === 'dashboard' ? 'active' : '' ?>">Dashboard</a>
+            <a href="?section=messages" class="<?= $section === 'messages' ? 'active' : '' ?>">Messages</a>
             <a href="?section=cars" class="<?= $section === 'cars' ? 'active' : '' ?>">Car Management</a>
             <a href="?section=parts" class="<?= $section === 'parts' ? 'active' : '' ?>">Part Management</a>
             <a href="?section=sources" class="<?= $section === 'sources' ? 'active' : '' ?>">Affiliate Sources</a>
@@ -181,7 +201,44 @@ renderHeader();
         <?php if ($success): ?> <div style="background: #28a745; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;"><?= $success ?></div> <?php endif; ?>
         <?php if ($error): ?> <div style="background: #dc3545; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;"><?= $error ?></div> <?php endif; ?>
 
-        <?php if ($section === 'cars'): ?>
+        <?php if ($section === 'messages'): ?>
+            <div class="card">
+                <h2>Admin Messages</h2>
+                <p style="color: #aaa; margin-bottom: 20px;">Contact form submissions from users.</p>
+
+                <?php
+                $messages = $conn->query("SELECT * FROM admin_messages ORDER BY date_sent DESC");
+
+                if ($messages && $messages->num_rows > 0) {
+                    while ($msg = $messages->fetch_assoc()) {
+                        ?>
+                        <div class="message-card">
+                            <div class="message-header">
+                                <div>
+                                    <h4 style="margin: 0; color: #fff;">From: <?= htmlspecialchars($msg['sender_name']) ?> <span style="font-weight: normal; color: #aaa;">(<?= htmlspecialchars($msg['sender_email']) ?>)</span></h4>
+                                    <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #00d4ff;"><strong>Addressed to:</strong> <?= htmlspecialchars($msg['target_admin_email']) ?></p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <small style="color: #888; display: block; margin-bottom: 10px;"><?= date('M j, Y, g:i a', strtotime($msg['date_sent'])) ?></small>
+                                    <form method="POST" onsubmit="return confirm('Are you sure you want to delete this message?');">
+                                        <input type="hidden" name="message_id" value="<?= $msg['message_id'] ?>">
+                                        <button type="submit" name="delete_message" class="btn-danger">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <p style="color: #ccc; line-height: 1.6; margin: 0;">
+                                <?= nl2br(htmlspecialchars($msg['message'])) ?>
+                            </p>
+                        </div>
+                        <?php
+                    }
+                } else {
+                    echo "<div style='background: #0f3460; padding: 20px; border-radius: 8px; text-align: center; color: #aaa;'>Your inbox is empty. No messages yet!</div>";
+                }
+                ?>
+            </div>
+
+        <?php elseif ($section === 'cars'): ?>
 
             <div class="card">
                 <h2>Add New Car</h2>
