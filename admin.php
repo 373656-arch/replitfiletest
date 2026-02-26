@@ -183,6 +183,20 @@ renderHeader();
     .message-header { display: flex; justify-content: space-between; border-bottom: 1px solid #1a1a2e; padding-bottom: 10px; margin-bottom: 15px; }
     .btn-danger { background: #dc3545; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
     .btn-danger:hover { background: #c82333; }
+    .message-card.highlight-msg { 
+        border-left: 4px solid #22c55e; /* Green border instead of blue */
+        background: #133a54; /* Slightly different background to stand out */
+    }
+    .badge-yours {
+        background: #22c55e;
+        color: #000;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        margin-left: 10px;
+        vertical-align: middle;
+    }
 </style>
 
 <div class="container admin-container">
@@ -211,12 +225,26 @@ renderHeader();
 
                 if ($messages && $messages->num_rows > 0) {
                     while ($msg = $messages->fetch_assoc()) {
+
+                        // Check if this message is for the logged-in admin
+                        $isForMe = ($msg['target_admin_email'] === $user['email']);
+
+                        // Apply the highlight class if true
+                        $cardClass = $isForMe ? "message-card highlight-msg" : "message-card";
                         ?>
-                        <div class="message-card">
+
+                        <div class="<?= $cardClass ?>">
                             <div class="message-header">
                                 <div>
                                     <h4 style="margin: 0; color: #fff;">From: <?= htmlspecialchars($msg['sender_name']) ?> <span style="font-weight: normal; color: #aaa;">(<?= htmlspecialchars($msg['sender_email']) ?>)</span></h4>
-                                    <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #00d4ff;"><strong>Addressed to:</strong> <?= htmlspecialchars($msg['target_admin_email']) ?></p>
+
+                                    <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #00d4ff;">
+                                        <strong>Addressed to:</strong> <?= htmlspecialchars($msg['target_admin_email']) ?>
+
+                                        <?php if ($isForMe): ?>
+                                            <span class="badge-yours">For You</span>
+                                        <?php endif; ?>
+                                    </p>
                                 </div>
                                 <div style="text-align: right;">
                                     <small style="color: #888; display: block; margin-bottom: 10px;"><?= date('M j, Y, g:i a', strtotime($msg['date_sent'])) ?></small>

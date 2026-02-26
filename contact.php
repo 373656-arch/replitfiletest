@@ -3,45 +3,41 @@ require_once 'config.php';
 $pageTitle = "Contact Admin - ModMyCar";
 require_once 'includes/headerFooter.php';
 
-$message_sent = false;
+// Check if we just redirected here after a successful send
+$message_sent = isset($_GET['success']) && $_GET['success'] == '1';
+$error = '';
 
-// Handle the form submission
-// Handle the form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_contact'])) {
-    // Using ?? '' prevents undefined array key warnings in PHP 8+
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $target_admin = trim($_POST['target_admin'] ?? '');
     $message = trim($_POST['message'] ?? '');
 
     if (!empty($name) && !empty($email) && !empty($target_admin) && !empty($message)) {
-        // Insert the message into the database instead of emailing it
-        $stmt = $conn->prepare("INSERT INTO admin_messages (sender_name, sender_email, target_admin_email, message) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("ssss", $name, $email, $target_admin, $message);
+
+        // FIX: Set your local timezone (I set it to Pacific Time based on your location)
+        date_default_timezone_set('America/Los_Angeles'); 
+        $current_time = date('Y-m-d H:i:s');
+
+        // Insert including the precise local time
+        $stmt = $conn->prepare("INSERT INTO admin_messages (sender_name, sender_email, target_admin_email, message, date_sent) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssss", $name, $email, $target_admin, $message, $current_time);
 
         if ($stmt->execute()) {
-            $message_sent = true;
+            // FIX: Redirect to clear POST data and prevent double-submits on refresh
+            header("Location: contact.php?success=1");
+            exit;
+        } else {
+            $error = "Failed to send message.";
         }
     } else {
         $error = "Please fill out all fields and select a valid admin.";
     }
 }
 
-    if (!empty($name) && !empty($email) && !empty($target_admin) && !empty($message)) {
-        // Insert the message into the database instead of emailing it
-        $stmt = $conn->prepare("INSERT INTO admin_messages (sender_name, sender_email, target_admin_email, message) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("ssss", $name, $email, $target_admin, $message);
-
-        if ($stmt->execute()) {
-            $message_sent = true;
-        }
-    }
-
-
-// Fetch admin emails from the whitelist for the dropdown
-// Note: Adjust 'email' if your column name in admin_whitelist is different
 $admins_result = $conn->query("SELECT email FROM admin_whitelist");
-
+renderHeader();
+?>
 renderHeader();
 ?>
 
