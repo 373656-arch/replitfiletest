@@ -300,13 +300,25 @@ function drop(event) {
 }
 
 // --- Helper: Check Compatibility ---
-function checkPartCompatibility(pEngine, pChassis, pStart, pEnd) {
-    if (pEngine && pEngine !== carData.engine) return false;
-    if (pChassis && pChassis !== carData.chassis) return false;
-    if (carData.year < pStart || carData.year > pEnd) return false;
-    return true;
-}
+    function checkPartCompatibility(pEngine, pChassis, pStart, pEnd) {
+        // 1. Normalize the data (ignores uppercase/lowercase and accidental spaces)
+        const carEng = carData.engine ? carData.engine.trim().toLowerCase() : "";
+        const carChas = carData.chassis ? carData.chassis.trim().toLowerCase() : "";
+        const partEng = pEngine ? pEngine.trim().toLowerCase() : "";
+        const partChas = pChassis ? pChassis.trim().toLowerCase() : "";
 
+        // 2. If the part has NO engine or chassis code listed, assume it's a universal part (like generic wheels)
+        if (!partEng && !partChas) {
+            return true; 
+        }
+
+        // 3. Check for our "OR" condition
+        const engineMatches = (partEng !== "" && partEng === carEng);
+        const chassisMatches = (partChas !== "" && partChas === carChas);
+
+        // 4. Return true if either the engine OR the chassis is a match
+        return engineMatches || chassisMatches;
+    }
 // --- UI Updates ---
 function updateBuildDisplay() {
     const buildPartsDiv = document.getElementById('buildParts');
