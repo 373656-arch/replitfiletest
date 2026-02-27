@@ -25,7 +25,14 @@ if (isset($_GET['build'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $is_ajax = isset($_POST['ajax']) && $_POST['ajax'] == '1';
+    $action = $_POST['action'] ?? '';
+
     if (!isLoggedIn()) {
+        if ($is_ajax) {
+            echo json_encode(['success' => false, 'error' => 'Please log in first.']);
+            exit;
+        }
         header('Location: /user/login.php');
         exit;
     }
@@ -33,33 +40,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // -------------------------
     // Like / Unlike build
     // -------------------------
-    if (isset($_POST['like_build'])) {
+    if ($action === 'like_build' || isset($_POST['like_build'])) {
         $build_id = (int)$_POST['build_id'];
 
-        // Check existing like
         $stmt = $conn->prepare("SELECT 1 FROM user_likes WHERE user_id = ? AND build_id = ?");
         $stmt->bind_param("ii", $_SESSION['user_id'], $build_id);
         $stmt->execute();
         $result = $stmt->get_result();
 
         if ($result && $result->num_rows > 0) {
-            // Unlike: remove row and decrement safely
             $del = $conn->prepare("DELETE FROM user_likes WHERE user_id = ? AND build_id = ?");
             $del->bind_param("ii", $_SESSION['user_id'], $build_id);
             $del->execute();
             $upd = $conn->prepare("UPDATE builds SET likes_count = GREATEST(likes_count - 1, 0) WHERE build_id = ?");
             $upd->bind_param("i", $build_id);
             $upd->execute();
+            $new_status = 'Like';
         } else {
-            // Like: insert and increment
             $ins = $conn->prepare("INSERT INTO user_likes (user_id, build_id) VALUES (?, ?)");
             $ins->bind_param("ii", $_SESSION['user_id'], $build_id);
             $ins->execute();
             $upd = $conn->prepare("UPDATE builds SET likes_count = likes_count + 1 WHERE build_id = ?");
             $upd->bind_param("i", $build_id);
             $upd->execute();
+            $new_status = 'Unlike';
         }
 
+        if ($is_ajax) {
+            echo json_encode(['success' => true, 'action' => 'like_build', 'text' => $new_status]);
+            exit;
+        }
         header("Location: community.php?build=" . $build_id);
         exit;
     }
@@ -67,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // -------------------------
     // Save build to user's saved list
     // -------------------------
-    if (isset($_POST['save_build'])) {
+    if ($action === 'save_build' || isset($_POST['save_build'])) {
         $build_id = (int)$_POST['build_id'];
 
         $stmt = $conn->prepare("SELECT 1 FROM user_saved_builds WHERE user_id = ? AND build_id = ?");
@@ -81,6 +91,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute();
         }
 
+        if ($is_ajax) {
+            echo json_encode(['success' => true, 'action' => 'save_build', 'text' => 'Saved!']);
+            exit;
+        }
         header("Location: community.php?build=" . $build_id);
         exit;
     }
@@ -88,14 +102,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // -------------------------
     // Add comment / reply
     // -------------------------
-    if (isset($_POST['add_comment'])) {
+    if ($action === 'add_comment' || isset($_POST['add_comment'])) {
         $build_id = (int)$_POST['build_id'];
         $content = trim($_POST['content'] ?? '');
         $parent_id = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
 
         if ($content !== '') {
             $stmt = $conn->prepare("INSERT INTO comments (build_id, user_id, parent_comment_id, content) VALUES (?, ?, ?, ?)");
-            // parent_comment_id can be NULL
             if ($parent_id === null) {
                 $null = null;
                 $stmt->bind_param("iiss", $build_id, $_SESSION['user_id'], $null, $content);
@@ -103,19 +116,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->bind_param("iiis", $build_id, $_SESSION['user_id'], $parent_id, $content);
             }
             $stmt->execute();
+            $new_comment_id = $conn->insert_id;
+
+            if ($is_ajax) {
+                // Fetch user info to render the HTML
+                $user = getUserData($_SESSION['user_id']);
+                $date_posted = date('M j, Y');
+                $is_reply = ($parent_id !== null);
+
+                ob_start(); // Buffer the HTML snippet to send back
+                ?>
+                <div class="comment <?php echo $is_reply ? 'reply' : ''; ?>">
+                    <div class="comment-header">
+                        <a href="/public_profile.php?username=<?php echo urlencode($user['username']); ?>" style="color: var(--accent-2); text-decoration: none;"><span class="comment-author"><?php echo htmlspecialchars($user['username']); ?></span></a>
+                        <span style="font-size: 0.9rem; opacity: 0.7;"><?php echo $date_posted; ?></span>
+                    </div>
+                    <p><?php echo nl2br(htmlspecialchars($content)); ?></p>
+
+                    <?php if (!$is_reply): ?>
+                        <button onclick="showReplyForm(<?php echo $new_comment_id; ?>)" class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.9rem;">Reply</button>
+                    <?php endif; ?>
+
+                    <form method="POST" class="ajax-form" style="display: inline;">
+                        <input type="hidden" name="ajax" value="1">
+                        <input type="hidden" name="action" value="delete_comment">
+                        <input type="hidden" name="comment_id" value="<?php echo $new_comment_id; ?>">
+                        <input type="hidden" name="build_id" value="<?php echo $build_id; ?>">
+                        <button type="submit" class="btn" style="background: #ef4444; padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="return confirm('Delete this?')">Delete</button>
+                    </form>
+
+                    <?php if (!$is_reply): ?>
+                        <div id="reply-form-<?php echo $new_comment_id; ?>" style="display: none; margin-top: 1rem;">
+                            <form method="POST" class="ajax-form">
+                                <input type="hidden" name="ajax" value="1">
+                                <input type="hidden" name="action" value="add_comment">
+                                <input type="hidden" name="build_id" value="<?php echo $build_id; ?>">
+                                <input type="hidden" name="parent_id" value="<?php echo $new_comment_id; ?>">
+                                <textarea name="content" placeholder="Write a reply..." required></textarea>
+                                <button type="submit" class="btn">Post Reply</button>
+                            </form>
+                        </div>
+                        <div id="replies-container-<?php echo $new_comment_id; ?>" class="replies-container" style="display: block;"></div>
+                    <?php endif; ?>
+                </div>
+                <?php
+                $html = ob_get_clean();
+                echo json_encode(['success' => true, 'action' => 'add_comment', 'html' => $html, 'parent_id' => $parent_id]);
+                exit;
+            }
         }
 
-        header("Location: community.php?build=" . $build_id);
-        exit;
+        if (!$is_ajax) {
+            header("Location: community.php?build=" . $build_id);
+            exit;
+        }
     }
 
     // -------------------------
-    // Delete comment (and its direct replies)
+    // Delete comment
     // -------------------------
-    if (isset($_POST['delete_comment'])) {
+    if ($action === 'delete_comment' || isset($_POST['delete_comment'])) {
         $comment_id = (int)$_POST['comment_id'];
 
-        // fetch the comment author
         $stmt = $conn->prepare("SELECT user_id FROM comments WHERE comment_id = ?");
         $stmt->bind_param("i", $comment_id);
         $stmt->execute();
@@ -125,47 +187,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $comment = $result->fetch_assoc();
             $user = getUserData($_SESSION['user_id']);
 
-            // Allow deletion if owner or admin
             if ($comment['user_id'] == $_SESSION['user_id'] || isAdmin($user['email'])) {
-                // delete the comment and any replies that have this comment as parent
                 $del = $conn->prepare("DELETE FROM comments WHERE comment_id = ? OR parent_comment_id = ?");
                 $del->bind_param("ii", $comment_id, $comment_id);
                 $del->execute();
             }
         }
 
+        if ($is_ajax) {
+            echo json_encode(['success' => true, 'action' => 'delete_comment']);
+            exit;
+        }
         header("Location: community.php?build=" . (int)($_POST['build_id'] ?? 0));
         exit;
     }
 
     // -------------------------
-    // Fork build -> do NOT create a DB record
-    // Instead: store a prefill in session and redirect to index.php
+    // Fork build (Keeps normal redirect, no AJAX needed here)
     // -------------------------
     if (isset($_POST['fork_build'])) {
+        // [Existing Fork logic remains unchanged]
         $original_build_id = (int)$_POST['build_id'];
-
-        // Load original build and ensure it's community-shared
         $stmt = $conn->prepare("SELECT * FROM builds WHERE build_id = ? AND is_community_shared = 1");
         $stmt->bind_param("i", $original_build_id);
         $stmt->execute();
         $original_build_result = $stmt->get_result();
 
         if (!$original_build_result || $original_build_result->num_rows === 0) {
-            // build not found or not shared — redirect back to the community page
             header("Location: /community.php?build=" . $original_build_id);
             exit;
         }
 
         $original_build = $original_build_result->fetch_assoc();
-
-        // Load parts for the original build
-        $stmt = $conn->prepare("
-            SELECT p.part_id, p.name, p.price, bp.position_data
-            FROM build_parts bp
-            JOIN parts p ON bp.part_id = p.part_id
-            WHERE bp.build_id = ?
-        ");
+        $stmt = $conn->prepare("SELECT p.part_id, p.name, p.price, bp.position_data FROM build_parts bp JOIN parts p ON bp.part_id = p.part_id WHERE bp.build_id = ?");
         $stmt->bind_param("i", $original_build_id);
         $stmt->execute();
         $parts_result = $stmt->get_result();
@@ -182,7 +236,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Store prefill data in session — index.php will consume and unset it
         $_SESSION['prefill_build'] = [
             'car_id'      => (int)$original_build['car_id'],
             'parts'       => $prefill_parts,
@@ -190,39 +243,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'build_title' => 'Fork of ' . ($original_build['build_title'] ?? 'Build')
         ];
 
-        // Redirect to build page (index.php) where the UI will be prefilled
         header("Location: /index.php");
         exit;
     }
 }
 
 // -------------------------
-// Filters and community list
+// Filters and community list [Unchanged]
 // -------------------------
 $filter_car = $_GET['filter_car'] ?? '';
 $filter_budget = $_GET['filter_budget'] ?? '';
-
-// Basic sanitization: cast filter_car to int when present, and allow only known budget tokens
 $filter_car_id = $filter_car !== '' ? (int)$filter_car : 0;
 $allowed_budgets = ['low','medium','high'];
 $filter_budget = in_array($filter_budget, $allowed_budgets, true) ? $filter_budget : '';
 
-$query = "SELECT b.*, c.name as car_name, u.username as creator_name 
-          FROM builds b 
-          JOIN cars c ON b.car_id = c.car_id 
-          JOIN users u ON b.user_id = u.uid 
+$query = "SELECT b.*, c.name as car_name, u.username as creator_name  
+          FROM builds b  
+          JOIN cars c ON b.car_id = c.car_id  
+          JOIN users u ON b.user_id = u.uid  
           WHERE b.is_community_shared = 1";
 
-if ($filter_car_id) {
-    $query .= " AND c.car_id = " . $filter_car_id;
-}
-if ($filter_budget === 'low') {
-    $query .= " AND b.total_price < 1000";
-} elseif ($filter_budget === 'medium') {
-    $query .= " AND b.total_price BETWEEN 1000 AND 3000";
-} elseif ($filter_budget === 'high') {
-    $query .= " AND b.total_price > 3000";
-}
+if ($filter_car_id) { $query .= " AND c.car_id = " . $filter_car_id; }
+if ($filter_budget === 'low') { $query .= " AND b.total_price < 1000"; } 
+elseif ($filter_budget === 'medium') { $query .= " AND b.total_price BETWEEN 1000 AND 3000"; } 
+elseif ($filter_budget === 'high') { $query .= " AND b.total_price > 3000"; }
 
 $query .= " ORDER BY b.likes_count DESC, b.date_created DESC";
 $community_builds = $conn->query($query);
@@ -304,9 +348,11 @@ renderHeader();
 
             <?php if (isLoggedIn()): ?>
                 <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                    <form method="POST" style="display:inline;">
+                    <form method="POST" class="ajax-form" style="display:inline;">
+                        <input type="hidden" name="ajax" value="1">
+                        <input type="hidden" name="action" value="like_build">
                         <input type="hidden" name="build_id" value="<?php echo (int)$selected_build['build_id']; ?>">
-                        <button type="submit" name="like_build" class="btn">
+                        <button type="submit" class="btn">
                             <?php
                             $stmt = $conn->prepare("SELECT 1 FROM user_likes WHERE user_id = ? AND build_id = ?");
                             $stmt->bind_param("ii", $_SESSION['user_id'], $selected_build['build_id']);
@@ -317,9 +363,11 @@ renderHeader();
                         </button>
                     </form>
 
-                    <form method="POST" style="display:inline;">
+                    <form method="POST" class="ajax-form" style="display:inline;">
+                        <input type="hidden" name="ajax" value="1">
+                        <input type="hidden" name="action" value="save_build">
                         <input type="hidden" name="build_id" value="<?php echo (int)$selected_build['build_id']; ?>">
-                        <button type="submit" name="save_build" class="btn btn-secondary">Save Build</button>
+                        <button type="submit" class="btn btn-secondary">Save Build</button>
                     </form>
 
                     <form method="POST" style="display:inline;">
@@ -361,10 +409,12 @@ renderHeader();
             <h3>Comments</h3>
 
             <?php if (isLoggedIn()): ?>
-                <form method="POST" style="margin-bottom: 2rem;">
+                <form method="POST" class="ajax-form main-comment-form" style="margin-bottom: 2rem;">
+                    <input type="hidden" name="ajax" value="1">
+                    <input type="hidden" name="action" value="add_comment">
                     <input type="hidden" name="build_id" value="<?php echo (int)$selected_build['build_id']; ?>">
                     <textarea name="content" placeholder="Add a comment..." required></textarea>
-                    <button type="submit" name="add_comment" class="btn">Post Comment</button>
+                    <button type="submit" class="btn">Post Comment</button>
                 </form>
             <?php endif; ?>
 
@@ -382,83 +432,87 @@ renderHeader();
             $user = isLoggedIn() ? getUserData($_SESSION['user_id']) : null;
             ?>
 
-            <?php while ($comment = $comments->fetch_assoc()): ?>
-                <div class="comment">
-                    <div class="comment-header">
-                        <a href="/public_profile.php?username=<?php echo urlencode($comment['username']); ?>" style="color: var(--accent-2); text-decoration: none;"><span class="comment-author"><?php echo htmlspecialchars($comment['username']); ?></span></a>
-                        <span style="font-size: 0.9rem; opacity: 0.7;"><?php echo date('M j, Y', strtotime($comment['date_posted'])); ?></span>
-                    </div>
-                    <p><?php echo nl2br(htmlspecialchars($comment['content'])); ?></p>
-                    
-                    <?php if (isLoggedIn()): ?>
-                        <button onclick="showReplyForm(<?php echo (int)$comment['comment_id']; ?>)" class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.9rem;">Reply</button>
-                        
-                        <?php if ($user && ($comment['user_id'] == $_SESSION['user_id'] || isAdmin($user['email']))): ?>
-                            <form method="POST" style="display: inline;">
-                                <input type="hidden" name="comment_id" value="<?php echo (int)$comment['comment_id']; ?>">
-                                <input type="hidden" name="build_id" value="<?php echo (int)$selected_build['build_id']; ?>">
-                                <button type="submit" name="delete_comment" class="btn" style="background: #ef4444; padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="return confirm('Delete this comment?')">Delete</button>
-                            </form>
-                        <?php endif; ?>
-
-                        <div id="reply-form-<?php echo (int)$comment['comment_id']; ?>" style="display: none; margin-top: 1rem;">
-                            <form method="POST">
-                                <input type="hidden" name="build_id" value="<?php echo (int)$selected_build['build_id']; ?>">
-                                <input type="hidden" name="parent_id" value="<?php echo (int)$comment['comment_id']; ?>">
-                                <textarea name="content" placeholder="Write a reply..." required></textarea>
-                                <button type="submit" name="add_comment" class="btn">Post Reply</button>
-                            </form>
+            <div id="comments-list">
+                <?php while ($comment = $comments->fetch_assoc()): ?>
+                    <div class="comment">
+                        <div class="comment-header">
+                            <a href="/public_profile.php?username=<?php echo urlencode($comment['username']); ?>" style="color: var(--accent-2); text-decoration: none;"><span class="comment-author"><?php echo htmlspecialchars($comment['username']); ?></span></a>
+                            <span style="font-size: 0.9rem; opacity: 0.7;"><?php echo date('M j, Y', strtotime($comment['date_posted'])); ?></span>
                         </div>
-                    <?php endif; ?>
+                        <p><?php echo nl2br(htmlspecialchars($comment['content'])); ?></p>
 
-                    <?php
-                    $stmt2 = $conn->prepare("
-                        SELECT c.*, u.username 
-                        FROM comments c 
-                        JOIN users u ON c.user_id = u.uid 
-                        WHERE c.parent_comment_id = ? 
-                        ORDER BY c.date_posted ASC
-                    ");
-                    $stmt2->bind_param("i", $comment['comment_id']);
-                    $stmt2->execute();
-                    $replies_result = $stmt2->get_result();
-                    $replies_array = $replies_result->fetch_all(MYSQLI_ASSOC);
-                    $reply_count = count($replies_array);
-                    ?>
+                        <?php if (isLoggedIn()): ?>
+                            <button onclick="showReplyForm(<?php echo (int)$comment['comment_id']; ?>)" class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.9rem;">Reply</button>
 
-                    <?php if ($reply_count > 0): ?>
-                        <button onclick="toggleReplies(<?php echo (int)$comment['comment_id']; ?>, this)" class="btn btn-secondary toggle-replies" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.9rem;">Show Replies (<span id="reply-count-<?php echo (int)$comment['comment_id']; ?>"><?php echo $reply_count; ?></span>)</button>
-                        <div id="replies-container-<?php echo (int)$comment['comment_id']; ?>" class="replies-container" style="display: none;">
-                    <?php endif; ?>
-
-                    <?php foreach ($replies_array as $reply): ?>
-                        <div class="comment reply">
-                            <div class="comment-header">
-                                <a href="/public_profile.php?username=<?php echo urlencode($reply['username']); ?>" style="color: var(--accent-2); text-decoration: none;"><span class="comment-author"><?php echo htmlspecialchars($reply['username']); ?></span></a>
-                                <span style="font-size: 0.9rem; opacity: 0.7;"><?php echo date('M j, Y', strtotime($reply['date_posted'])); ?></span>
-                            </div>
-                            <p><?php echo nl2br(htmlspecialchars($reply['content'])); ?></p>
-                            
-                            <?php if ($user && ($reply['user_id'] == $_SESSION['user_id'] || isAdmin($user['email']))): ?>
-                                <form method="POST" style="display: inline;">
-                                    <input type="hidden" name="comment_id" value="<?php echo (int)$reply['comment_id']; ?>">
+                            <?php if ($user && ($comment['user_id'] == $_SESSION['user_id'] || isAdmin($user['email']))): ?>
+                                <form method="POST" class="ajax-form" style="display: inline;">
+                                    <input type="hidden" name="ajax" value="1">
+                                    <input type="hidden" name="action" value="delete_comment">
+                                    <input type="hidden" name="comment_id" value="<?php echo (int)$comment['comment_id']; ?>">
                                     <input type="hidden" name="build_id" value="<?php echo (int)$selected_build['build_id']; ?>">
-                                    <button type="submit" name="delete_comment" class="btn" style="background: #ef4444; padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="return confirm('Delete this reply?')">Delete</button>
+                                    <button type="submit" class="btn" style="background: #ef4444; padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="return confirm('Delete this comment?')">Delete</button>
                                 </form>
                             <?php endif; ?>
+
+                            <div id="reply-form-<?php echo (int)$comment['comment_id']; ?>" style="display: none; margin-top: 1rem;">
+                                <form method="POST" class="ajax-form">
+                                    <input type="hidden" name="ajax" value="1">
+                                    <input type="hidden" name="action" value="add_comment">
+                                    <input type="hidden" name="build_id" value="<?php echo (int)$selected_build['build_id']; ?>">
+                                    <input type="hidden" name="parent_id" value="<?php echo (int)$comment['comment_id']; ?>">
+                                    <textarea name="content" placeholder="Write a reply..." required></textarea>
+                                    <button type="submit" class="btn">Post Reply</button>
+                                </form>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php
+                        $stmt2 = $conn->prepare("
+                            SELECT c.*, u.username 
+                            FROM comments c 
+                            JOIN users u ON c.user_id = u.uid 
+                            WHERE c.parent_comment_id = ? 
+                            ORDER BY c.date_posted ASC
+                        ");
+                        $stmt2->bind_param("i", $comment['comment_id']);
+                        $stmt2->execute();
+                        $replies_result = $stmt2->get_result();
+                        $replies_array = $replies_result->fetch_all(MYSQLI_ASSOC);
+                        $reply_count = count($replies_array);
+                        ?>
+
+                        <button onclick="toggleReplies(<?php echo (int)$comment['comment_id']; ?>, this)" class="btn btn-secondary toggle-replies" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.9rem; <?php echo ($reply_count == 0) ? 'display:none;' : ''; ?>">Show Replies (<span id="reply-count-<?php echo (int)$comment['comment_id']; ?>"><?php echo $reply_count; ?></span>)</button>
+
+                        <div id="replies-container-<?php echo (int)$comment['comment_id']; ?>" class="replies-container" style="display: none;">
+                            <?php foreach ($replies_array as $reply): ?>
+                                <div class="comment reply">
+                                    <div class="comment-header">
+                                        <a href="/public_profile.php?username=<?php echo urlencode($reply['username']); ?>" style="color: var(--accent-2); text-decoration: none;"><span class="comment-author"><?php echo htmlspecialchars($reply['username']); ?></span></a>
+                                        <span style="font-size: 0.9rem; opacity: 0.7;"><?php echo date('M j, Y', strtotime($reply['date_posted'])); ?></span>
+                                    </div>
+                                    <p><?php echo nl2br(htmlspecialchars($reply['content'])); ?></p>
+
+                                    <?php if ($user && ($reply['user_id'] == $_SESSION['user_id'] || isAdmin($user['email']))): ?>
+                                        <form method="POST" class="ajax-form" style="display: inline;">
+                                            <input type="hidden" name="ajax" value="1">
+                                            <input type="hidden" name="action" value="delete_comment">
+                                            <input type="hidden" name="comment_id" value="<?php echo (int)$reply['comment_id']; ?>">
+                                            <input type="hidden" name="build_id" value="<?php echo (int)$selected_build['build_id']; ?>">
+                                            <button type="submit" class="btn" style="background: #ef4444; padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="return confirm('Delete this reply?')">Delete</button>
+                                        </form>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
-                    <?php endforeach; ?>
-                    
-                    <?php if ($reply_count > 0): ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            <?php endwhile; ?>
+                    </div>
+                <?php endwhile; ?>
+            </div>
         </div>
     <?php endif; ?>
 </div>
 
 <script>
+// --- UI Toggle Functions ---
 function showReplyForm(commentId) {
     const form = document.getElementById('reply-form-' + commentId);
     if (!form) return;
@@ -469,9 +523,9 @@ function toggleReplies(commentId, button) {
     const container = document.getElementById('replies-container-' + commentId);
     const replyCount = document.getElementById('reply-count-' + commentId);
     if (!container || !button || !replyCount) return;
-    
+
     const replyCountText = replyCount.textContent || '0';
-    
+
     if (container.style.display === 'none') {
         container.style.display = 'block';
         button.textContent = 'Hide Replies (' + replyCountText + ')';
@@ -480,6 +534,84 @@ function toggleReplies(commentId, button) {
         button.textContent = 'Show Replies (' + replyCountText + ')';
     }
 }
+
+// --- AJAX Form Handling ---
+document.addEventListener('DOMContentLoaded', function() {
+    // Listen for submits on anything with the class "ajax-form"
+    document.addEventListener('submit', function(e) {
+        if (!e.target.classList.contains('ajax-form')) return;
+
+        e.preventDefault(); // Stop the page refresh!
+
+        const form = e.target;
+        const formData = new FormData(form);
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        // Temporarily disable the button so users don't double click
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = '...';
+        submitBtn.disabled = true;
+
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            if (data.success) {
+                const action = data.action;
+
+                // 1. Handling Likes & Saves
+                if (action === 'like_build' || action === 'save_build') {
+                    submitBtn.textContent = data.text; 
+                } 
+
+                // 2. Handling Comment Deletions
+                else if (action === 'delete_comment') {
+                    // Remove the closest comment element visually
+                    form.closest('.comment').remove();
+                } 
+
+                // 3. Handling New Comments / Replies
+                else if (action === 'add_comment') {
+                    form.querySelector('textarea').value = ''; // Clear text box
+
+                    if (data.parent_id) {
+                        // It's a reply! Add it to the replies container
+                        const container = document.getElementById('replies-container-' + data.parent_id);
+                        container.insertAdjacentHTML('beforeend', data.html);
+                        container.style.display = 'block'; // Ensure it's visible
+                        form.parentElement.style.display = 'none'; // Hide reply form
+
+                        // Update the reply count button
+                        const countSpan = document.getElementById('reply-count-' + data.parent_id);
+                        if(countSpan) {
+                            countSpan.textContent = parseInt(countSpan.textContent) + 1;
+                            countSpan.parentElement.style.display = 'inline-block'; // Show button if it was hidden
+                        }
+                    } else {
+                        // It's a top-level comment!
+                        const commentsList = document.getElementById('comments-list');
+                        commentsList.insertAdjacentHTML('afterbegin', data.html); // Add to the top
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Error!';
+        });
+    });
+});
 </script>
 
 <?php renderFooter(); ?>
