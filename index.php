@@ -301,22 +301,22 @@ function drop(event) {
 
 // --- Helper: Check Compatibility ---
     function checkPartCompatibility(pEngine, pChassis, pStart, pEnd) {
-        // 1. Normalize the data (ignores uppercase/lowercase and accidental spaces)
+        // 1. Normalize the data to prevent case/spacing errors
         const carEng = carData.engine ? carData.engine.trim().toLowerCase() : "";
         const carChas = carData.chassis ? carData.chassis.trim().toLowerCase() : "";
         const partEng = pEngine ? pEngine.trim().toLowerCase() : "";
         const partChas = pChassis ? pChassis.trim().toLowerCase() : "";
 
-        // 2. If the part has NO engine or chassis code listed, assume it's a universal part (like generic wheels)
-        if (!partEng && !partChas) {
-            return true; 
+        // 2. If the part has no codes assigned at all, it's incompatible by default
+        if (partEng === "" && partChas === "") {
+            return false;
         }
 
-        // 3. Check for our "OR" condition
-        const engineMatches = (partEng !== "" && partEng === carEng);
-        const chassisMatches = (partChas !== "" && partChas === carChas);
+        // 3. Ensure neither string is empty BEFORE checking if they match
+        const engineMatches = (partEng !== "" && carEng !== "" && partEng === carEng);
+        const chassisMatches = (partChas !== "" && carChas !== "" && partChas === carChas);
 
-        // 4. Return true if either the engine OR the chassis is a match
+        // 4. Return true if either a valid engine OR a valid chassis is a match
         return engineMatches || chassisMatches;
     }
 // --- UI Updates ---
