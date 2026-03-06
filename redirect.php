@@ -34,8 +34,11 @@ $stmt->bind_param("iis", $part_id, $user_id, $ip_address);
 $stmt->execute();
 $click_id = $conn->insert_id;
 
-// Monetization Simulation: 10% conversion rate
-if (rand(1, 10) === 1) {
+// Monetization Simulation: 1 of every 10 clicks gets 10% commission
+$click_count_query = $conn->query("SELECT COUNT(*) as total FROM click_logs");
+$total_clicks = $click_count_query->fetch_assoc()['total'];
+
+if ($total_clicks % 10 === 0) {
     // Get part price for commission calculation (10% affiliate split)
     $stmt = $conn->prepare("SELECT price FROM parts WHERE part_id = ?");
     $stmt->bind_param("i", $part_id);
