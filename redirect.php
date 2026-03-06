@@ -32,6 +32,22 @@ $ip_address = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 $stmt = $conn->prepare("INSERT INTO click_logs (part_id, user_id, ip_address) VALUES (?, ?, ?)");
 $stmt->bind_param("iis", $part_id, $user_id, $ip_address);
 $stmt->execute();
+$click_id = $conn->insert_id;
+
+// Monetization Simulation: 10% conversion rate
+if (rand(1, 10) === 1) {
+    // Get part price for commission calculation (10% affiliate split)
+    $stmt = $conn->prepare("SELECT price FROM parts WHERE part_id = ?");
+    $stmt->bind_param("i", $part_id);
+    $stmt->execute();
+    $p_res = $stmt->get_result();
+    if ($p_row = $p_res->fetch_assoc()) {
+        $commission = $p_row['price'] * 0.10;
+        $stmt = $conn->prepare("INSERT INTO conversions (click_id, part_id, commission_amount) VALUES (?, ?, ?)");
+        $stmt->bind_param("iid", $click_id, $part_id, $commission);
+        $stmt->execute();
+    }
+}
 
 header('Location: ' . $affiliate_url);
 exit;

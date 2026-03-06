@@ -208,6 +208,7 @@ renderHeader();
             <a href="?section=cars" class="<?= $section === 'cars' ? 'active' : '' ?>">Car Management</a>
             <a href="?section=parts" class="<?= $section === 'parts' ? 'active' : '' ?>">Part Management</a>
             <a href="?section=sources" class="<?= $section === 'sources' ? 'active' : '' ?>">Affiliate Sources</a>
+            <a href="?section=monetization" class="<?= $section === 'monetization' ? 'active' : '' ?>">Monetization</a>
         </nav>
     </aside>
 
@@ -215,7 +216,85 @@ renderHeader();
         <?php if ($success): ?> <div style="background: #28a745; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;"><?= $success ?></div> <?php endif; ?>
         <?php if ($error): ?> <div style="background: #dc3545; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px;"><?= $error ?></div> <?php endif; ?>
 
-        <?php if ($section === 'messages'): ?>
+        <?php if ($section === 'monetization'): ?>
+            <div class="card">
+                <h2>Monetization Tracking</h2>
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                
+                <?php
+                // Fetch stats
+                $click_count = $conn->query("SELECT COUNT(*) as total FROM click_logs")->fetch_assoc()['total'];
+                $conv_res = $conn->query("SELECT COUNT(*) as total, SUM(commission_amount) as revenue FROM conversions")->fetch_assoc();
+                $conv_count = $conv_res['total'];
+                $total_revenue = $conv_res['revenue'] ?? 0;
+                $conv_rate = $click_count > 0 ? ($conv_count / $click_count) * 100 : 0;
+
+                // Daily data for chart
+                $daily_data = $conn->query("
+                    SELECT DATE(conversion_date) as day, SUM(commission_amount) as amount 
+                    FROM conversions 
+                    GROUP BY day 
+                    ORDER BY day ASC 
+                    LIMIT 30
+                ")->fetch_all(MYSQLI_ASSOC);
+                
+                $labels = json_encode(array_column($daily_data, 'day'));
+                $values = json_encode(array_column($daily_data, 'amount'));
+                ?>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <div class="card" style="background: #0f3460; text-align: center;">
+                        <h4 style="color: #00d4ff;">Total Clicks</h4>
+                        <p style="font-size: 2rem; margin: 10px 0;"><?= $click_count ?></p>
+                    </div>
+                    <div class="card" style="background: #0f3460; text-align: center;">
+                        <h4 style="color: #00d4ff;">Conversions</h4>
+                        <p style="font-size: 2rem; margin: 10px 0;"><?= $conv_count ?></p>
+                    </div>
+                    <div class="card" style="background: #0f3460; text-align: center;">
+                        <h4 style="color: #00d4ff;">Revenue</h4>
+                        <p style="font-size: 2rem; margin: 10px 0;">$<?= number_format($total_revenue, 2) ?></p>
+                    </div>
+                    <div class="card" style="background: #0f3460; text-align: center;">
+                        <h4 style="color: #00d4ff;">Conv. Rate</h4>
+                        <p style="font-size: 2rem; margin: 10px 0;"><?= number_format($conv_rate, 1) ?>%</p>
+                    </div>
+                </div>
+
+                <div class="card" style="background: #0f3460;">
+                    <h3>Revenue Over Time (Last 30 Days)</h3>
+                    <canvas id="revenueChart" style="max-height: 400px;"></canvas>
+                </div>
+
+                <script>
+                    const ctx = document.getElementById('revenueChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: <?= $labels ?>,
+                            datasets: [{
+                                label: 'Commission Revenue ($)',
+                                data: <?= $values ?>,
+                                borderColor: '#00d4ff',
+                                backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { labels: { color: '#fff' } }
+                            },
+                            scales: {
+                                y: { grid: { color: '#333' }, ticks: { color: '#aaa' } },
+                                x: { grid: { color: '#333' }, ticks: { color: '#aaa' } }
+                            }
+                        }
+                    });
+                </script>
+            </div>
+        <?php elseif ($section === 'messages'): ?>
             <div class="card">
                 <h2>Admin Messages</h2>
                 <p style="color: #aaa; margin-bottom: 20px;">Contact form submissions from users.</p>
