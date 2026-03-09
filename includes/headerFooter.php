@@ -89,8 +89,12 @@ function renderHeader() {
 function renderFooter() {
     ?>
         </main>
-        <footer>
-            <p>&copy; <?php echo date('Y'); ?> modmycar</p>
+        <footer style="padding: 2rem 0; text-align: center; border-top: 1px solid #333; margin-top: 3rem;">
+            <p style="margin-bottom: 0.5rem; color: #aaa;">&copy; <?php echo date('Y'); ?> modmycar</p>
+            <div style="display: flex; justify-content: center; gap: 1.5rem; font-size: 0.9rem;">
+                <a href="/contact.php" style="color: #888; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'">Contact Us</a>
+                <a href="/faq.php" style="color: #888; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'">Need Help?</a>
+            </div>
         </footer>
         <script>
             function toggleTheme() {
@@ -103,7 +107,8 @@ function renderFooter() {
             const savedTheme = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', savedTheme);
             const loader = document.querySelector('.page-loader');
-            // Play sound only when the page first loads
+
+            // Page transition logic
             const navLinks = document.querySelectorAll('header nav a');
             navLinks.forEach(link => {
                 link.addEventListener('click', function(e) {
@@ -117,6 +122,7 @@ function renderFooter() {
                     }
                 });
             });
+
             const logoLink = document.querySelector('header a[href="/index.php"]');
             if (logoLink) {
                 logoLink.addEventListener('click', function(e) {
@@ -128,6 +134,7 @@ function renderFooter() {
                     }, 300);
                 });
             }
+
             window.addEventListener('beforeunload', function() {
                 loader.classList.add('active');
             });

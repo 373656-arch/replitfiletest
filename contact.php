@@ -38,8 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_contact'])) {
 $admins_result = $conn->query("SELECT email FROM admin_whitelist");
 renderHeader();
 ?>
-renderHeader();
-?>
 
 <div class="container">
     <h2>Contact Administrators</h2>
