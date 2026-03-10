@@ -35,6 +35,7 @@ if ($selected_car_id) {
     $stmt->execute();
     $selected_car = $stmt->get_result()->fetch_assoc();
 
+    // We still grab p.* so $part['link'] will be included automatically
     $query = "SELECT p.*, a.base_url FROM parts p LEFT JOIN affiliate_sources a ON p.source_id = a.source_id ORDER BY p.category, p.name";
     $parts_result = $conn->query($query);
     $parts = $parts_result ? $parts_result->fetch_all(MYSQLI_ASSOC) : [];
@@ -101,7 +102,7 @@ renderHeader();
     .dropdown-item { padding: 10px; cursor: pointer; color: #ddd; border-bottom: 1px solid #333; }
     .dropdown-item:hover { background: #333; color: #fff; }
     .dropdown-item:last-child { border-bottom: none; }
-    
+
     .part-item { position: relative; }
     .affiliate-link {
         position: absolute;
@@ -118,7 +119,7 @@ renderHeader();
     .affiliate-link:hover { color: #fff; background: #2196F3; }
     .affiliate-link-mini { color: #2196F3; line-height: 0; display: flex; align-items: center; }
     .affiliate-link-mini:hover { color: #fff; }
-    
+
     /* Ensure icon visibility in the card */
     .part-item h4 { margin-right: 35px; } /* Make room for the top-right icon */
 </style>
@@ -174,6 +175,18 @@ renderHeader();
 
                 <div id="partsList">
                     <?php foreach ($parts as $part): ?>
+                        <?php 
+                            // 1. Grab the link directly from the database column
+                            $raw_url = $part['link'] ?? '';
+
+                            // 2. Force https:// if it's missing (just to be safe)
+                            if (!empty($raw_url) && !preg_match("~^(?:f|ht)tps?://~i", $raw_url)) {
+                                $raw_url = "https://" . $raw_url;
+                            }
+
+                            // 3. Make it safe for HTML output
+                            $full_link = htmlspecialchars($raw_url);
+                        ?>
                         <div class="part-item"
                              data-part-id="<?= $part['part_id']; ?>"
                              data-category="<?= htmlspecialchars($part['category']); ?>"
@@ -183,24 +196,22 @@ renderHeader();
                              data-chassis="<?= htmlspecialchars($part['chassis_code'] ?? ''); ?>"
                              data-year-start="<?= $part['year_start'] ?? 0; ?>"
                              data-year-end="<?= $part['year_end'] ?? 9999; ?>"
-                             data-link="<?= htmlspecialchars($part['base_url'] . ($part['affiliate_id'] ?? '')); ?>"
+                             data-link="<?= $full_link; ?>" 
                              draggable="true"
                              ondragstart="drag(event)">
-                            <?php if ($part['image']): ?>
+
+                            <?php if (!empty($part['image'])): ?>
                                 <img src="<?= htmlspecialchars($part['image']); ?>">
                             <?php endif; ?>
+
                             <h4><?= htmlspecialchars($part['name']); ?></h4>
                             <p class="price">$<?= number_format($part['price'], 2); ?></p>
+
                             <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
-                                <a href="<?= htmlspecialchars(($part['base_url'] ?? '') . ($part['affiliate_id'] ?? '')); ?>" target="_blank" class="btn btn-sm" style="width: 80px; text-align: center; text-decoration: none; background: #2196F3; color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">View</a>
+                                <a href="<?= $full_link; ?>" target="_blank" class="btn btn-sm" style="width: 80px; text-align: center; text-decoration: none; background: #2196F3; color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">View</a>
                             </div>
-                            <?php if (!empty($part['base_url'])): ?>
-                                <a href="<?= htmlspecialchars($part['base_url'] . ($part['affiliate_id'] ?? '')); ?>" target="_blank" class="affiliate-link" title="View on Store" onclick="event.stopPropagation();">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-up-left-square" viewBox="0 0 16 16">
-                                        <path fill-rule="evenodd" d="M15 2a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1zM0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm10.096 8.803a.5.5 0 1 0 .707-.707L6.707 6h2.768a.5.5 0 1 0 0-1H5.5a.5.5 0 0 0-.5.5v3.975a.5.5 0 0 0 1 0V6.707z"/>
-                                    </svg>
-                                </a>
-                            <?php endif; ?>
+
+                           
                         </div>
                     <?php endforeach; ?>
                 </div>
