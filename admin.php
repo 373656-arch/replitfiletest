@@ -29,6 +29,20 @@ if (!isAdmin($user['email'])) {
     exit;
 }
 
+// --- AJAX ENDPOINT FOR LIVE REFRESH ---
+// This handles the background requests so the page doesn't have to reload
+if (isset($_GET['ajax_refresh']) && $_GET['ajax_refresh'] === '1') {
+    header('Content-Type: application/json');
+    $tables = ['users', 'user_saved_builds', 'click_logs', 'cars', 'parts', 'part_compatibility', 'affiliate_sources'];
+    $counts = [];
+    foreach($tables as $t) {
+        $res = $conn->query("SELECT COUNT(*) as c FROM $t");
+        $counts[$t] = $res ? $res->fetch_assoc()['c'] : 0;
+    }
+    echo json_encode($counts);
+    exit; // Stop executing the rest of the page layout
+}
+
 $section = $_GET['section'] ?? 'dashboard';
 $success = '';
 $error = '';
@@ -107,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // --- PART MANAGEMENT (UNCHANGED) ---
+    // --- PART MANAGEMENT ---
     if (isset($_POST['add_part'])) {
         $name = trim($_POST['name']);
         $price = (float)$_POST['price'];
@@ -184,8 +198,8 @@ renderHeader();
     .btn-danger { background: #dc3545; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
     .btn-danger:hover { background: #c82333; }
     .message-card.highlight-msg { 
-        border-left: 4px solid #22c55e; /* Green border instead of blue */
-        background: #133a54; /* Slightly different background to stand out */
+        border-left: 4px solid #22c55e; 
+        background: #133a54; 
     }
     .badge-yours {
         background: #22c55e;
@@ -196,6 +210,27 @@ renderHeader();
         font-weight: bold;
         margin-left: 10px;
         vertical-align: middle;
+    }
+
+    /* Background Refresh Spinner CSS */
+    .refresh-spinner {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border: 3px solid rgba(0, 212, 255, 0.2);
+        border-radius: 50%;
+        border-top-color: #00d4ff;
+        animation: spin 1s ease-in-out infinite;
+        vertical-align: middle;
+        margin-left: 12px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .refresh-spinner.active {
+        opacity: 1;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
 </style>
 
@@ -208,6 +243,7 @@ renderHeader();
             <a href="?section=cars" class="<?= $section === 'cars' ? 'active' : '' ?>">Car Management</a>
             <a href="?section=parts" class="<?= $section === 'parts' ? 'active' : '' ?>">Part Management</a>
             <a href="?section=sources" class="<?= $section === 'sources' ? 'active' : '' ?>">Affiliate Sources</a>
+            <a href="?section=database_visualization" class="<?= $section === 'database_visualization' ? 'active' : '' ?>">Database Visualization</a>
             <a href="?section=monetization" class="<?= $section === 'monetization' ? 'active' : '' ?>">Monetization</a>
         </nav>
     </aside>
@@ -220,7 +256,7 @@ renderHeader();
             <div class="card">
                 <h2>Monetization Tracking</h2>
                 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                
+
                 <?php
                 // Fetch stats
                 $click_count = $conn->query("SELECT COUNT(*) as total FROM click_logs")->fetch_assoc()['total'];
@@ -237,7 +273,7 @@ renderHeader();
                     ORDER BY day ASC 
                     LIMIT 30
                 ")->fetch_all(MYSQLI_ASSOC);
-                
+
                 $labels = json_encode(array_column($daily_data, 'day'));
                 $values = json_encode(array_column($daily_data, 'amount'));
                 ?>
@@ -294,6 +330,85 @@ renderHeader();
                     });
                 </script>
             </div>
+
+        <?php elseif ($section === 'database_visualization'): ?>
+            <div class="card">
+                <h2>
+                    Database Visualization 
+                    <div id="loading-spinner" class="refresh-spinner"></div>
+                </h2>
+                <p style="color: #22c55e; font-size: 0.85rem; margin-top: -10px; margin-bottom: 20px;">
+                    ● Live Updating smoothly in background (10s)
+                </p>
+
+                <?php
+                // Initial page load data
+                $tables = ['users', 'user_saved_builds', 'click_logs', 'cars', 'parts', 'part_compatibility', 'affiliate_sources'];
+                $counts = [];
+
+                foreach($tables as $t) {
+                    $res = $conn->query("SELECT COUNT(*) as c FROM $t");
+                    $counts[$t] = $res ? $res->fetch_assoc()['c'] : 0;
+                }
+                ?>
+
+                <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
+                    <?php foreach($counts as $table => $count): ?>
+                        <div style="background: #0f3460; border-left: 4px solid #00d4ff; padding: 20px; border-radius: 8px; flex: 1 1 calc(25% - 15px); min-width: 150px;">
+                            <h4 style="margin: 0; color: #aaa; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;"><?= htmlspecialchars($table) ?></h4>
+                            <p id="count-<?= htmlspecialchars($table) ?>" style="font-size: 2rem; margin: 10px 0 0 0; color: #fff; font-weight: bold; transition: color 0.3s;"><?= $count ?></p>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <div style="background: #132a4a; padding: 20px; border-radius: 8px; border: 1px solid #1a1a2e;">
+                    <h3 style="color: #00d4ff; margin-top: 0;">Entity Relationships</h3>
+                    <ul style="color: #ccc; line-height: 2; list-style-type: none; padding: 0;">
+                        <li>🔑 <strong>users</strong> ➔ <em>Links to:</em> user_saved_builds, click_logs</li>
+                        <li>🔑 <strong>cars</strong> ➔ <em>Links to:</em> user_saved_builds, part_compatibility</li>
+                        <li>🔑 <strong>parts</strong> ➔ <em>Links to:</em> click_logs, part_compatibility</li>
+                        <li>🔑 <strong>affiliate_sources</strong> ➔ <em>Links to:</em> parts</li>
+                    </ul>
+                </div>
+            </div>
+
+            <script>
+                setInterval(function() {
+                    const spinner = document.getElementById('loading-spinner');
+
+                    // Show the spinner
+                    spinner.classList.add('active');
+
+                    // Fetch the updated data silently
+                    fetch('?section=database_visualization&ajax_refresh=1')
+                        .then(response => response.json())
+                        .then(data => {
+                            // Update the numbers on the screen
+                            for (const [table, count] of Object.entries(data)) {
+                                const countElement = document.getElementById('count-' + table);
+                                if (countElement) {
+                                    // Make the text flash green slightly if the number changed
+                                    if (countElement.innerText !== String(count)) {
+                                        countElement.style.color = '#22c55e';
+                                        setTimeout(() => countElement.style.color = '#fff', 1000);
+                                    }
+                                    countElement.innerText = count;
+                                }
+                            }
+
+                            // Hide the spinner after a brief moment
+                            setTimeout(() => {
+                                spinner.classList.remove('active');
+                            }, 500);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching live data:', error);
+                            spinner.classList.remove('active');
+                        });
+
+                }, 10000); // 10000 ms = 10 seconds
+            </script>
+
         <?php elseif ($section === 'messages'): ?>
             <div class="card">
                 <h2>Admin Messages</h2>
