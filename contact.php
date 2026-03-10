@@ -1,5 +1,12 @@
 <?php
 require_once 'config.php';
+
+// Check if the user is logged in before showing the page
+if (!isLoggedIn()) { 
+    header('Location: /user/login.php'); 
+    exit; 
+}
+
 $pageTitle = "Contact Admin - ModMyCar";
 require_once 'includes/headerFooter.php';
 
@@ -49,6 +56,12 @@ renderHeader();
         <a href="contact.php" class="btn btn-secondary">Send another message</a>
     <?php else: ?>
         <form method="POST" class="card">
+            <?php if (!empty($error)): ?>
+                <div style="color: #ff4d4d; margin-bottom: 1rem; font-weight: bold;">
+                    <?= htmlspecialchars($error); ?>
+                </div>
+            <?php endif; ?>
+
             <label>Your Name:</label>
             <input type="text" name="name" required style="width: 100%; margin-bottom: 1rem; padding: 0.5rem;">
 
