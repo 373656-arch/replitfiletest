@@ -192,7 +192,7 @@ renderHeader();
                             <h4><?= htmlspecialchars($part['name']); ?></h4>
                             <p class="price">$<?= number_format($part['price'], 2); ?></p>
                             <div style="margin-top: 10px; display: flex; gap: 10px;">
-                                <a href="<?= htmlspecialchars(($part['base_url'] ?? '') . ($part['affiliate_id'] ?? '')); ?>" target="_blank" class="btn btn-sm" style="flex: 1; text-align: center; text-decoration: none; background: #2196F3; color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">View</a>
+                                <a href="<?= htmlspecialchars(($part['base_url'] ?? '') . ($part['affiliate_id'] ?? '')); ?>" target="_blank" class="btn btn-sm" style="width: 80px; text-align: center; text-decoration: none; background: #2196F3; color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">View</a>
                             </div>
                             <?php if (!empty($part['base_url'])): ?>
                                 <a href="<?= htmlspecialchars($part['base_url'] . ($part['affiliate_id'] ?? '')); ?>" target="_blank" class="affiliate-link" title="View on Store" onclick="event.stopPropagation();">
