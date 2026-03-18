@@ -260,9 +260,9 @@ let showCompatibleOnly = false;
 
 // --- Car Data (Passed from PHP) ---
 const carData = {
-    year: <?= (int)$selected_car['year']; ?>,
-    engine: "<?= $selected_car['engine_code']; ?>",
-    chassis: "<?= $selected_car['chassis_code']; ?>"
+    year: <?= $selected_car ? (int)$selected_car['year'] : 0; ?>,
+    engine: "<?= $selected_car ? htmlspecialchars($selected_car['engine_code'], ENT_QUOTES) : ''; ?>",
+    chassis: "<?= $selected_car ? htmlspecialchars($selected_car['chassis_code'], ENT_QUOTES) : ''; ?>"
 };
 
 // --- Drag & Drop ---
