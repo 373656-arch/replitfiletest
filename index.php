@@ -227,6 +227,7 @@ renderHeader();
                     <h4>Build Summary</h4>
                     <p><strong>Car:</strong> <?= htmlspecialchars($selected_car['name']); ?></p>
                     <p><strong>Total Price:</strong> $<span id="totalPrice">0.00</span></p>
+                    <p><strong>Estimated Horsepower:</strong> <span id="estimatedHP">—</span> <span id="hpSpinner" style="display:none; font-size:0.8rem; color:#888;">calculating...</span></p>
                     <div id="incompatibleCount" class="summary-warning">⚠️ 0 parts incompatible</div>
 
                     <div class="flex-wrap-gap" style="display: flex; gap: 10px; flex-direction: column;">
@@ -373,6 +374,8 @@ function updateBuildDisplay() {
     }
 
     clearBtn.style.display = buildParts.length > 0 ? 'block' : 'none';
+
+    fetchEstimatedHP();
 }
 
 function removePart(index) {
@@ -448,6 +451,45 @@ function filterParts() {
         // Final Visibility Decision
         part.style.display = (matchesSearch && matchesCategory && matchesCompat) ? 'block' : 'none';
     });
+}
+
+// --- Estimated Horsepower ---
+let hpDebounceTimer = null;
+
+function fetchEstimatedHP() {
+    const carName = "<?= $selected_car ? htmlspecialchars($selected_car['name'], ENT_QUOTES) : ''; ?>";
+    if (!carName) return;
+
+    const hpEl = document.getElementById('estimatedHP');
+    const spinner = document.getElementById('hpSpinner');
+
+    hpEl.textContent = '—';
+    spinner.style.display = 'inline';
+
+    clearTimeout(hpDebounceTimer);
+    hpDebounceTimer = setTimeout(() => {
+        fetch('/api/estimate_hp.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                car: carName,
+                parts: buildParts.filter(p => p.isCompatible).map(p => ({ name: p.name }))
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            spinner.style.display = 'none';
+            if (data.hp) {
+                hpEl.textContent = data.hp + ' HP';
+            } else {
+                hpEl.textContent = '—';
+            }
+        })
+        .catch(() => {
+            spinner.style.display = 'none';
+            hpEl.textContent = '—';
+        });
+    }, 800);
 }
 
 // --- Save Modal ---
