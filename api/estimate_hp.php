@@ -31,7 +31,7 @@ $parts_list = empty($parts)
 $prompt = "You are an automotive performance expert. Given the car and modifications listed, estimate the total horsepower output as a single integer number. Reply with ONLY the number, nothing else.\n\nCar: {$car_name}\nModifications: {$parts_list}";
 
 $payload = json_encode([
-    'model' => 'llama3-8b-8192',
+    'model' => 'llama-3.1-8b-instant',
     'messages' => [
         ['role' => 'user', 'content' => $prompt]
     ],
