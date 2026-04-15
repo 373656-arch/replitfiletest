@@ -1,14 +1,14 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
 
 session_start();
 
-define('DB_HOST', 'srv941.hstgr.io');
-define('DB_USER', 'u237055794_car');
-define('DB_PASS', 'k>=fVIqH1');
-define('DB_NAME', 'u237055794_car');
+define('DB_HOST', getenv('DB_HOST') ?: 'srv941.hstgr.io');
+define('DB_USER', getenv('DB_USER') ?: '');
+define('DB_PASS', getenv('DB_PASS') ?: '');
+define('DB_NAME', getenv('DB_NAME') ?: '');
 
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
