@@ -721,6 +721,14 @@ footer {
 }
 
 /* PROFILE PAGE */
+.profile-image {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent-1);
+}
+
 .profile-image-placeholder {
     background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
     border: 2px solid var(--accent-1);
