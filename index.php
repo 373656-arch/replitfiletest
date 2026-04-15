@@ -47,9 +47,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
     $total_price = (float)($_POST['total_price'] ?? 0);
     $is_shared = isset($_POST['share_community']) ? 1 : 0;
     $build_data = json_decode($_POST['build_data'] ?? '[]', true);
+    $estimated_hp = isset($_POST['estimated_hp']) && is_numeric($_POST['estimated_hp']) ? (int)$_POST['estimated_hp'] : null;
 
-    $stmt = $conn->prepare("INSERT INTO builds (user_id, car_id, build_title, total_price, is_community_shared) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("iisdi", $_SESSION['user_id'], $selected_car_id, $build_title, $total_price, $is_shared);
+    $stmt = $conn->prepare("INSERT INTO builds (user_id, car_id, build_title, total_price, is_community_shared, estimated_hp) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("iisdii", $_SESSION['user_id'], $selected_car_id, $build_title, $total_price, $is_shared, $estimated_hp);
     if ($stmt->execute()) {
         $build_id = $conn->insert_id;
         foreach ($build_data as $item) {
@@ -248,6 +249,7 @@ renderHeader();
             <input type="text" name="build_title" required placeholder="Build Title">
             <input type="hidden" name="total_price" id="saveTotalPrice">
             <input type="hidden" name="build_data" id="saveBuildData">
+            <input type="hidden" name="estimated_hp" id="saveEstimatedHP">
             <button type="submit" name="save_build" class="btn">Save Build</button>
         </form>
     </div>
@@ -501,6 +503,9 @@ function showSaveModal() {
 function prepareBuildData() {
     document.getElementById('saveTotalPrice').value = buildParts.reduce((sum, p) => sum + p.price, 0).toFixed(2);
     document.getElementById('saveBuildData').value = JSON.stringify(buildParts);
+    const hpText = document.getElementById('estimatedHP').textContent;
+    const hpVal = parseInt(hpText, 10);
+    document.getElementById('saveEstimatedHP').value = isNaN(hpVal) ? '' : hpVal;
 }
 </script>
 

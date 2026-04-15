@@ -324,6 +324,9 @@ renderHeader();
                             <p>by <a href="/public_profile.php?username=<?php echo urlencode($build['creator_name']); ?>" style="color: var(--accent-2); text-decoration: none;"><?php echo htmlspecialchars($build['creator_name']); ?></a></p>
                             <p><?php echo htmlspecialchars($build['car_name']); ?></p>
                             <p class="price" style="color: var(--accent-1); font-weight: bold;">$<?php echo number_format((float)$build['total_price'], 2); ?></p>
+                            <?php if (!empty($build['estimated_hp'])): ?>
+                                <p style="color: #f39c12; font-weight: bold;">⚡ <?php echo (int)$build['estimated_hp']; ?> HP (estimated)</p>
+                            <?php endif; ?>
                             <p>👍 <?php echo (int)$build['likes_count']; ?> likes</p>
                             <div class="build-actions">
                                 <a href="?build=<?php echo (int)$build['build_id']; ?>" class="btn">View Details</a>
@@ -344,6 +347,9 @@ renderHeader();
             <p>by <a href="/public_profile.php?user=<?php echo (int)$selected_build['creator_id']; ?>" style="color: var(--accent-2); text-decoration: none;"><strong><?php echo htmlspecialchars($selected_build['creator_name']); ?></strong></a></p>
             <p><?php echo htmlspecialchars($selected_build['car_name']); ?></p>
             <p style="font-size: 1.5rem; color: var(--accent-1); font-weight: bold;">Total: $<?php echo number_format((float)$selected_build['total_price'], 2); ?></p>
+            <?php if (!empty($selected_build['estimated_hp'])): ?>
+                <p style="font-size: 1.2rem; color: #f39c12; font-weight: bold;">⚡ Estimated Horsepower: <?php echo (int)$selected_build['estimated_hp']; ?> HP</p>
+            <?php endif; ?>
             <p>👍 <?php echo (int)$selected_build['likes_count']; ?> likes</p>
 
             <?php if (isLoggedIn()): ?>
