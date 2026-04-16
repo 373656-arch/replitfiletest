@@ -318,7 +318,7 @@ function drop(event) {
     });
 
     updateBuildDisplay();
-    updatePartsList(); // Refresh list to hide added parts
+    filterParts(); // Refresh list to hide added parts
 }
 
 // --- Helper: Check Compatibility ---
@@ -388,14 +388,14 @@ function updateBuildDisplay() {
 function removePart(index) {
     buildParts.splice(index, 1);
     updateBuildDisplay();
-    updatePartsList();
+    filterParts();
 }
 
 function clearAllParts() {
     if(confirm("Are you sure you want to clear your current build?")) {
         buildParts = [];
         updateBuildDisplay();
-        updatePartsList();
+        filterParts();
     }
 }
 
