@@ -228,6 +228,7 @@ renderHeader();
                     <h4>Build Summary</h4>
                     <p><strong>Car:</strong> <?= htmlspecialchars($selected_car['name']); ?></p>
                     <p><strong>Total Price:</strong> $<span id="totalPrice">0.00</span></p>
+                    <p><strong>Stock Horsepower:</strong> <span id="stockHP">—</span> <span id="stockHpSpinner" style="display:none; font-size:0.8rem; color:#888;">loading...</span></p>
                     <p><strong>Estimated Horsepower:</strong> <span id="estimatedHP">—</span> <span id="hpSpinner" style="display:none; font-size:0.8rem; color:#888;">calculating...</span></p>
                     <div id="incompatibleCount" class="summary-warning">⚠️ 0 parts incompatible</div>
 
@@ -263,10 +264,14 @@ let showCompatibleOnly = false;
 
 // --- Car Data (Passed from PHP) ---
 const carData = {
+    id: <?= $selected_car ? (int)$selected_car['car_id'] : 0; ?>,
     year: <?= $selected_car ? (int)$selected_car['year'] : 0; ?>,
     engine: "<?= $selected_car ? htmlspecialchars($selected_car['engine_code'], ENT_QUOTES) : ''; ?>",
-    chassis: "<?= $selected_car ? htmlspecialchars($selected_car['chassis_code'], ENT_QUOTES) : ''; ?>"
+    chassis: "<?= $selected_car ? htmlspecialchars($selected_car['chassis_code'], ENT_QUOTES) : ''; ?>",
+    stockHp: <?= ($selected_car && !empty($selected_car['stock_hp'])) ? (int)$selected_car['stock_hp'] : 0; ?>
 };
+
+let stockHpValue = carData.stockHp;
 
 // --- Drag & Drop ---
 function drag(event) {
@@ -455,6 +460,46 @@ function filterParts() {
     });
 }
 
+// --- Stock Horsepower ---
+function fetchStockHP() {
+    if (!carData.id) return;
+
+    const stockEl = document.getElementById('stockHP');
+    const spinner = document.getElementById('stockHpSpinner');
+
+    if (stockHpValue > 0) {
+        stockEl.textContent = stockHpValue + ' HP';
+        return;
+    }
+
+    spinner.style.display = 'inline';
+    stockEl.textContent = '—';
+
+    fetch('/api/stock_hp.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ car_id: carData.id })
+    })
+    .then(r => r.json())
+    .then(data => {
+        spinner.style.display = 'none';
+        if (data.stock_hp) {
+            stockHpValue = data.stock_hp;
+            stockEl.textContent = data.stock_hp + ' HP';
+            const hpEl = document.getElementById('estimatedHP');
+            if (hpEl.textContent === '—') {
+                hpEl.textContent = data.stock_hp + ' HP';
+            }
+        } else {
+            stockEl.textContent = '—';
+        }
+    })
+    .catch(() => {
+        spinner.style.display = 'none';
+        stockEl.textContent = '—';
+    });
+}
+
 // --- Estimated Horsepower ---
 let hpDebounceTimer = null;
 
@@ -462,8 +507,18 @@ function fetchEstimatedHP() {
     const carName = "<?= $selected_car ? htmlspecialchars($selected_car['name'], ENT_QUOTES) : ''; ?>";
     if (!carName) return;
 
+    const compatibleParts = buildParts.filter(p => p.isCompatible);
     const hpEl = document.getElementById('estimatedHP');
     const spinner = document.getElementById('hpSpinner');
+
+    if (compatibleParts.length === 0) {
+        if (stockHpValue > 0) {
+            hpEl.textContent = stockHpValue + ' HP';
+        } else {
+            hpEl.textContent = '—';
+        }
+        return;
+    }
 
     hpEl.textContent = '—';
     spinner.style.display = 'inline';
@@ -475,7 +530,8 @@ function fetchEstimatedHP() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 car: carName,
-                parts: buildParts.filter(p => p.isCompatible).map(p => ({ name: p.name }))
+                stock_hp: stockHpValue,
+                parts: compatibleParts.map(p => ({ name: p.name }))
             })
         })
         .then(r => r.json())
@@ -484,12 +540,12 @@ function fetchEstimatedHP() {
             if (data.hp) {
                 hpEl.textContent = data.hp + ' HP';
             } else {
-                hpEl.textContent = '—';
+                hpEl.textContent = stockHpValue > 0 ? stockHpValue + ' HP' : '—';
             }
         })
         .catch(() => {
             spinner.style.display = 'none';
-            hpEl.textContent = '—';
+            hpEl.textContent = stockHpValue > 0 ? stockHpValue + ' HP' : '—';
         });
     }, 800);
 }
@@ -507,6 +563,11 @@ function prepareBuildData() {
     const hpVal = parseInt(hpText, 10);
     document.getElementById('saveEstimatedHP').value = isNaN(hpVal) ? '' : hpVal;
 }
+
+// --- Page Init ---
+<?php if ($selected_car): ?>
+fetchStockHP();
+<?php endif; ?>
 </script>
 
 <?php renderFooter(); ?>
