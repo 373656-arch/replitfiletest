@@ -48,3 +48,10 @@ outputType = "webview"
 task = "shell.exec"
 args = "php -S 0.0.0.0:5000"
 waitForPort = 5000
+
+[userenv]
+
+[userenv.shared]
+DB_HOST = "srv941.hstgr.io"
+DB_USER = "u237055794_car"
+DB_NAME = "u237055794_car"
