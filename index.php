@@ -79,6 +79,56 @@ renderHeader();
     .btn-outline-danger { background: transparent; border: 1px solid #ff4d4d; color: #ff4d4d; margin-top: 10px; }
     .btn-outline-danger:hover { background: #ff4d4d; color: #fff; }
 
+    /* Car Search Styles */
+    .car-search-wrapper { display: flex; flex-direction: column; gap: 10px; }
+    .car-search-filters { display: flex; gap: 10px; flex-wrap: wrap; }
+    .car-search-filters input { flex: 1; min-width: 160px; margin: 0; }
+    .car-results-list {
+        max-height: 260px;
+        overflow-y: auto;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--bg-tertiary);
+    }
+    .car-result-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-color);
+        transition: background 0.15s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--text-primary);
+    }
+    .car-result-item:last-child { border-bottom: none; }
+    .car-result-item:hover { background: var(--accent-1); color: #fff; }
+    .car-result-item .car-year-badge {
+        font-size: 0.8rem;
+        padding: 2px 8px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.12);
+        color: inherit;
+    }
+    .car-result-item:hover .car-year-badge { background: rgba(255,255,255,0.25); }
+    .car-no-results { padding: 16px; text-align: center; color: var(--text-secondary); }
+    .car-current-selection {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        background: rgba(6,182,212,0.1);
+        border: 1px solid var(--accent-1);
+        border-radius: 8px;
+        color: var(--text-primary);
+    }
+    .car-clear-btn {
+        color: var(--accent-1);
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: bold;
+    }
+    .car-clear-btn:hover { color: #ff4d4d; }
+
     /* Filter Toolbar Styles */
     .filters-toolbar { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
     .search-input { flex: 1; margin-bottom: 0; } /* Overwrite default mb */
@@ -130,16 +180,37 @@ renderHeader();
 
     <div class="card">
         <h3>Select Your Car</h3>
-        <form method="GET">
-            <select name="car_id" onchange="this.form.submit()" required>
-                <option value="">Choose a car...</option>
-                <?php $cars->data_seek(0); while ($car = $cars->fetch_assoc()): ?>
-                    <option value="<?= $car['car_id']; ?>" <?= ($selected_car_id == $car['car_id']) ? 'selected' : ''; ?>>
-                        <?= htmlspecialchars($car['name']); ?>
-                    </option>
-                <?php endwhile; ?>
-            </select>
+
+        <?php
+        $cars->data_seek(0);
+        $all_cars = $cars->fetch_all(MYSQLI_ASSOC);
+        $cars_json = json_encode(array_map(fn($c) => [
+            'id'    => $c['car_id'],
+            'brand' => $c['brand'],
+            'model' => $c['model'],
+            'year'  => $c['year'],
+            'name'  => $c['name'],
+        ], $all_cars), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $selected_car_name = $selected_car ? htmlspecialchars($selected_car['name'], ENT_QUOTES) : '';
+        ?>
+
+        <form method="GET" id="carSelectForm">
+            <input type="hidden" name="car_id" id="carIdInput" value="<?= (int)($selected_car_id ?? 0); ?>">
         </form>
+
+        <div class="car-search-wrapper">
+            <div class="car-search-filters">
+                <input type="text" id="carBrandSearch" placeholder="Search brand (e.g. Honda, Toyota...)" oninput="filterCars()" autocomplete="off">
+                <input type="text" id="carYearSearch" placeholder="Year (e.g. 2020)" oninput="filterCars()" autocomplete="off" style="max-width: 140px;">
+            </div>
+            <?php if ($selected_car): ?>
+                <div class="car-current-selection">
+                    <span>Selected: <strong><?= $selected_car_name; ?></strong></span>
+                    <a href="/" class="car-clear-btn">✕ Change</a>
+                </div>
+            <?php endif; ?>
+            <div id="carResultsList" class="car-results-list" style="display:none;"></div>
+        </div>
     </div>
 
     <?php if ($selected_car): ?>
@@ -257,6 +328,43 @@ renderHeader();
 </div>
 
 <script>
+// --- Car Search ---
+const ALL_CARS = <?= $cars_json; ?>;
+
+function filterCars() {
+    const brand = document.getElementById('carBrandSearch').value.trim().toLowerCase();
+    const year  = document.getElementById('carYearSearch').value.trim();
+    const list  = document.getElementById('carResultsList');
+
+    if (!brand && !year) {
+        list.style.display = 'none';
+        list.innerHTML = '';
+        return;
+    }
+
+    const filtered = ALL_CARS.filter(c => {
+        const brandMatch = !brand || c.brand.toLowerCase().includes(brand);
+        const yearMatch  = !year  || String(c.year).startsWith(year);
+        return brandMatch && yearMatch;
+    });
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div class="car-no-results">No cars found. Try a different brand or year.</div>';
+    } else {
+        list.innerHTML = filtered.map(c => `
+            <div class="car-result-item" onclick="selectCar(${c.id})">
+                <span>${c.brand} ${c.model}</span>
+                <span class="car-year-badge">${c.year}</span>
+            </div>`).join('');
+    }
+    list.style.display = 'block';
+}
+
+function selectCar(carId) {
+    document.getElementById('carIdInput').value = carId;
+    document.getElementById('carSelectForm').submit();
+}
+
 // --- Global State ---
 let buildParts = [];
 let currentCategory = 'all';
