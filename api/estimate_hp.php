@@ -74,19 +74,26 @@ $data = json_decode($response, true);
 $text = trim($data['choices'][0]['message']['content'] ?? '');
 $num = (int) preg_replace('/[^0-9]/', '', $text);
 
-if ($num <= 0) {
-    echo json_encode(['error' => 'Could not estimate horsepower']);
-    exit;
-}
-
 if ($stock_hp > 0) {
+    if ($num <= 0) {
+        echo json_encode(['hp' => $stock_hp, 'note' => 'Selected mods add no horsepower']);
+        exit;
+    }
     if ($num < $stock_hp) {
         $hp = $stock_hp + $num;
     } else {
         $gain = $num - $stock_hp;
-        $hp = $stock_hp + max($gain, 5);
+        if ($gain <= 0) {
+            echo json_encode(['hp' => $stock_hp, 'note' => 'Selected mods add no horsepower']);
+            exit;
+        }
+        $hp = $stock_hp + $gain;
     }
 } else {
+    if ($num <= 0) {
+        echo json_encode(['error' => 'Could not estimate horsepower']);
+        exit;
+    }
     $hp = $num;
 }
 

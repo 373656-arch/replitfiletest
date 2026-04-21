@@ -300,7 +300,7 @@ renderHeader();
                     <p><strong>Car:</strong> <?= htmlspecialchars($selected_car['name']); ?></p>
                     <p><strong>Total Price:</strong> $<span id="totalPrice">0.00</span></p>
                     <p><strong>Stock Horsepower:</strong> <span id="stockHP">—</span> <span id="stockHpSpinner" style="display:none; font-size:0.8rem; color:#888;">loading...</span></p>
-                    <p><strong>Estimated Horsepower:</strong> <span id="estimatedHP">—</span> <span id="hpSpinner" style="display:none; font-size:0.8rem; color:#888;">calculating...</span></p>
+                    <p><strong>Estimated Horsepower:</strong> <span id="estimatedHP">—</span> <span id="hpSpinner" style="display:none; font-size:0.8rem; color:#888;">calculating...</span> <span id="hpNote" style="display:none; font-size:0.8rem; color:#888; font-style:italic;"></span></p>
                     <div id="incompatibleCount" class="summary-warning">⚠️ 0 parts incompatible</div>
 
                     <div class="flex-wrap-gap" style="display: flex; gap: 10px; flex-direction: column;">
@@ -618,8 +618,10 @@ function fetchEstimatedHP() {
     const compatibleParts = buildParts.filter(p => p.isCompatible);
     const hpEl = document.getElementById('estimatedHP');
     const spinner = document.getElementById('hpSpinner');
+    const noteEl = document.getElementById('hpNote');
 
     if (compatibleParts.length === 0) {
+        noteEl.style.display = 'none';
         if (stockHpValue > 0) {
             hpEl.textContent = stockHpValue + ' HP';
         } else {
@@ -629,6 +631,7 @@ function fetchEstimatedHP() {
     }
 
     hpEl.textContent = '—';
+    noteEl.style.display = 'none';
     spinner.style.display = 'inline';
 
     clearTimeout(hpDebounceTimer);
@@ -647,8 +650,15 @@ function fetchEstimatedHP() {
             spinner.style.display = 'none';
             if (data.hp) {
                 hpEl.textContent = data.hp + ' HP';
+                if (data.note) {
+                    noteEl.textContent = '(' + data.note + ')';
+                    noteEl.style.display = 'inline';
+                } else {
+                    noteEl.style.display = 'none';
+                }
             } else {
                 hpEl.textContent = stockHpValue > 0 ? stockHpValue + ' HP' : '—';
+                noteEl.style.display = 'none';
             }
         })
         .catch(() => {
