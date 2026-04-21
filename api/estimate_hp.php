@@ -37,18 +37,18 @@ if (empty($parts)) {
 $parts_list = implode(', ', array_map(fn($p) => $p['name'], $parts));
 
 if ($stock_hp > 0) {
-    $prompt = "You are an automotive performance expert with precise knowledge of horsepower gains from aftermarket modifications.\n\nCar: {$car_name}\nFactory stock horsepower: {$stock_hp} HP\nModifications installed: {$parts_list}\n\nBased on the factory stock horsepower of {$stock_hp} HP, calculate the realistic total horsepower after all listed modifications. Consider realistic dyno-proven gains for each mod type (e.g., intake +5-15hp, exhaust +5-20hp, tune +20-50hp, turbo upgrade +50-150hp, etc.) and account for synergistic effects between mods.\n\nReply with ONLY a single integer number — the total estimated horsepower after modifications. Nothing else.";
+    $prompt = "You are an automotive performance expert with precise knowledge of dyno-proven horsepower gains from aftermarket modifications.\n\nCar: {$car_name} (stock: {$stock_hp} HP)\nModifications installed: {$parts_list}\n\nEstimate the TOTAL ADDITIONAL horsepower GAINED from these modifications combined (not the total output). Use realistic dyno-proven gains, for example: cold air intake +5-15hp, cat-back exhaust +5-20hp, headers +10-25hp, ECU tune +20-50hp, downpipe +15-40hp, turbo upgrade +50-150hp, supercharger +80-200hp, nitrous +50-200hp, larger injectors alone +0hp, etc. Account for synergy between supporting mods.\n\nReply with ONLY a single positive integer — the horsepower GAIN to add on top of stock. No words, no units, no explanation. Just the number.";
 } else {
-    $prompt = "You are an automotive performance expert. Given the car and modifications listed, estimate the realistic total horsepower output.\n\nCar: {$car_name}\nModifications: {$parts_list}\n\nReply with ONLY a single integer number representing the total estimated horsepower. Nothing else.";
+    $prompt = "You are an automotive performance expert. Estimate the realistic total horsepower output for this modified car.\n\nCar: {$car_name}\nModifications: {$parts_list}\n\nReply with ONLY a single integer number representing the total estimated horsepower. Nothing else.";
 }
 
 $payload = json_encode([
-    'model' => 'llama-3.1-8b-instant',
+    'model' => 'llama-3.3-70b-versatile',
     'messages' => [
         ['role' => 'user', 'content' => $prompt]
     ],
     'max_tokens' => 10,
-    'temperature' => 0.2
+    'temperature' => 0.3
 ]);
 
 $ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
@@ -72,15 +72,22 @@ if ($httpCode !== 200 || $response === false) {
 
 $data = json_decode($response, true);
 $text = trim($data['choices'][0]['message']['content'] ?? '');
-$hp = (int) preg_replace('/[^0-9]/', '', $text);
+$num = (int) preg_replace('/[^0-9]/', '', $text);
 
-if ($hp <= 0) {
+if ($num <= 0) {
     echo json_encode(['error' => 'Could not estimate horsepower']);
     exit;
 }
 
-if ($stock_hp > 0 && $hp < $stock_hp) {
-    $hp = $stock_hp;
+if ($stock_hp > 0) {
+    if ($num < $stock_hp) {
+        $hp = $stock_hp + $num;
+    } else {
+        $gain = $num - $stock_hp;
+        $hp = $stock_hp + max($gain, 5);
+    }
+} else {
+    $hp = $num;
 }
 
 echo json_encode(['hp' => $hp]);
