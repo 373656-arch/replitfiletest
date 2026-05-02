@@ -278,38 +278,35 @@ renderHeader();
 ?>
 
 <div class="container">
+    <div class="section-label">Browse</div>
     <h2>Community Builds</h2>
 
     <?php if (!$selected_build): ?>
         <div class="card">
-            <h3>Filter Builds</h3>
-            <form method="GET" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
-                <div>
-                    <select name="filter_car">
-                        <option value="">All Cars</option>
-                        <?php
-                        $cars = $conn->query("SELECT * FROM cars");
-                        while ($car = $cars->fetch_assoc()):
-                        ?>
-                            <option value="<?php echo (int)$car['car_id']; ?>" <?php echo ($filter_car == $car['car_id']) ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($car['name']); ?>
-                            </option>
-                        <?php endwhile; ?>
-                    </select>
-                </div>
-                <div>
-                    <select name="filter_budget">
-                        <option value="">All Budgets</option>
-                        <option value="low" <?php echo ($filter_budget === 'low') ? 'selected' : ''; ?>>Under $1,000</option>
-                        <option value="medium" <?php echo ($filter_budget === 'medium') ? 'selected' : ''; ?>>$1,000 - $3,000</option>
-                        <option value="high" <?php echo ($filter_budget === 'high') ? 'selected' : ''; ?>>Over $3,000</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn">Apply Filters</button>
+            <h3>Filter &amp; Search</h3>
+            <form method="GET" class="community-filters" style="margin-bottom: 1rem;">
+                <select name="filter_car">
+                    <option value="">All Cars</option>
+                    <?php
+                    $cars = $conn->query("SELECT * FROM cars");
+                    while ($car = $cars->fetch_assoc()):
+                    ?>
+                        <option value="<?php echo (int)$car['car_id']; ?>" <?php echo ($filter_car == $car['car_id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($car['name']); ?>
+                        </option>
+                    <?php endwhile; ?>
+                </select>
+                <select name="filter_budget">
+                    <option value="">All Budgets</option>
+                    <option value="low" <?php echo ($filter_budget === 'low') ? 'selected' : ''; ?>>Under $1,000</option>
+                    <option value="medium" <?php echo ($filter_budget === 'medium') ? 'selected' : ''; ?>>$1,000 – $3,000</option>
+                    <option value="high" <?php echo ($filter_budget === 'high') ? 'selected' : ''; ?>>Over $3,000</option>
+                </select>
+                <button type="submit" class="btn btn-sm">Apply</button>
             </form>
-            <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
-                <input type="text" id="communitySearch" placeholder="Search builds or cars..." style="flex: 1; min-width: 200px; margin: 0;" oninput="filterCommunity()">
-                <select id="communitySort" onchange="filterCommunity()" style="margin: 0; min-width: 160px;">
+            <div class="community-filters">
+                <input type="text" id="communitySearch" placeholder="Search builds, cars, or creators..." oninput="filterCommunity()">
+                <select id="communitySort" onchange="filterCommunity()">
                     <option value="likes">Most Liked</option>
                     <option value="newest">Newest First</option>
                     <option value="price_asc">Lowest Price</option>
@@ -331,46 +328,48 @@ renderHeader();
                         <?php if (!empty($build['featured_image'])): ?>
                             <img src="<?php echo htmlspecialchars($build['featured_image']); ?>" alt="Build">
                         <?php else: ?>
-                            <div style="height: 250px; background: var(--bg-primary); display: flex; align-items: center; justify-content: center;">
-                                <span>No Image</span>
-                            </div>
+                            <div class="img-placeholder">No Image</div>
                         <?php endif; ?>
                         <div class="build-card-content">
                             <h3><?php echo htmlspecialchars($build['build_title']); ?></h3>
-                            <p>by <a href="/public_profile.php?username=<?php echo urlencode($build['creator_name']); ?>" style="color: var(--accent-2); text-decoration: none;"><?php echo htmlspecialchars($build['creator_name']); ?></a></p>
-                            <p><?php echo htmlspecialchars($build['car_name']); ?></p>
-                            <p class="price" style="color: var(--accent-1); font-weight: bold;">$<?php echo number_format((float)$build['total_price'], 2); ?></p>
+                            <p class="text-muted fs-085">by <a href="/public_profile.php?username=<?php echo urlencode($build['creator_name']); ?>" class="creator-link"><?php echo htmlspecialchars($build['creator_name']); ?></a></p>
+                            <p class="text-muted fs-085"><?php echo htmlspecialchars($build['car_name']); ?></p>
+                            <p class="price-bold">$<?php echo number_format((float)$build['total_price'], 2); ?></p>
                             <?php if (!empty($build['estimated_hp'])): ?>
-                                <p style="color: #f39c12; font-weight: bold;">⚡ <?php echo (int)$build['estimated_hp']; ?> HP (estimated)</p>
+                                <p class="build-card-hp">⚡ <?php echo (int)$build['estimated_hp']; ?> HP</p>
                             <?php endif; ?>
-                            <p>👍 <?php echo (int)$build['likes_count']; ?> likes</p>
+                            <p class="text-muted fs-085">👍 <?php echo (int)$build['likes_count']; ?> likes</p>
                             <div class="build-actions">
-                                <a href="?build=<?php echo (int)$build['build_id']; ?>" class="btn">View Details</a>
+                                <a href="?build=<?php echo (int)$build['build_id']; ?>" class="btn btn-sm">View Details</a>
                             </div>
                         </div>
                     </div>
                 <?php endwhile; ?>
             <?php else: ?>
-                <p>No community builds found. Be the first to share one!</p>
+                <div class="empty-state" style="grid-column: 1/-1;">
+                    <p class="empty-state-text">No community builds yet</p>
+                    <p class="empty-state-subtext">Be the first to share your build with the community!</p>
+                    <a href="/index.php" class="start-link">Start Building →</a>
+                </div>
             <?php endif; ?>
         </div>
-        <p id="noSearchResults" style="display:none; text-align:center; color:var(--text-secondary); margin-top:2rem;">No builds match your search.</p>
+        <p id="noSearchResults" style="display:none;" class="text-center text-secondary mt-2">No builds match your search.</p>
 
     <?php else: ?>
-        <a href="/community.php" class="btn btn-secondary" style="margin-bottom: 1rem;">← Back to Community</a>
+        <a href="/community.php" class="back-link">← Back to Community</a>
 
-        <div class="card">
-            <h2><?php echo htmlspecialchars($selected_build['build_title']); ?></h2>
-            <p>by <a href="/public_profile.php?user=<?php echo (int)$selected_build['creator_id']; ?>" style="color: var(--accent-2); text-decoration: none;"><strong><?php echo htmlspecialchars($selected_build['creator_name']); ?></strong></a></p>
-            <p><?php echo htmlspecialchars($selected_build['car_name']); ?></p>
-            <p style="font-size: 1.5rem; color: var(--accent-1); font-weight: bold;">Total: $<?php echo number_format((float)$selected_build['total_price'], 2); ?></p>
+        <div class="card build-detail-header">
+            <h2 style="margin-bottom: 0.5rem;"><?php echo htmlspecialchars($selected_build['build_title']); ?></h2>
+            <p class="build-detail-meta">by <a href="/public_profile.php?user=<?php echo (int)$selected_build['creator_id']; ?>" class="creator-link"><?php echo htmlspecialchars($selected_build['creator_name']); ?></a></p>
+            <p class="build-detail-meta"><?php echo htmlspecialchars($selected_build['car_name']); ?></p>
+            <div class="build-detail-price">$<?php echo number_format((float)$selected_build['total_price'], 2); ?></div>
             <?php if (!empty($selected_build['estimated_hp'])): ?>
-                <p style="font-size: 1.2rem; color: #f39c12; font-weight: bold;">⚡ Estimated Horsepower: <?php echo (int)$selected_build['estimated_hp']; ?> HP</p>
+                <p class="build-detail-hp">⚡ Estimated Horsepower: <?php echo (int)$selected_build['estimated_hp']; ?> HP</p>
             <?php endif; ?>
-            <p>👍 <?php echo (int)$selected_build['likes_count']; ?> likes</p>
+            <p class="build-detail-meta">👍 <?php echo (int)$selected_build['likes_count']; ?> likes</p>
 
             <?php if (isLoggedIn()): ?>
-                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <div class="build-detail-actions">
                     <form method="POST" class="ajax-form" style="display:inline;">
                         <input type="hidden" name="ajax" value="1">
                         <input type="hidden" name="action" value="like_build">
@@ -381,7 +380,7 @@ renderHeader();
                             $stmt->bind_param("ii", $_SESSION['user_id'], $selected_build['build_id']);
                             $stmt->execute();
                             $res = $stmt->get_result();
-                            echo ($res && $res->num_rows > 0) ? 'Unlike' : 'Like';
+                            echo ($res && $res->num_rows > 0) ? '👍 Unlike' : '👍 Like';
                             ?>
                         </button>
                     </form>
@@ -390,12 +389,12 @@ renderHeader();
                         <input type="hidden" name="ajax" value="1">
                         <input type="hidden" name="action" value="save_build">
                         <input type="hidden" name="build_id" value="<?php echo (int)$selected_build['build_id']; ?>">
-                        <button type="submit" class="btn btn-secondary">Save Build</button>
+                        <button type="submit" class="btn btn-secondary">🔖 Save Build</button>
                     </form>
 
                     <form method="POST" style="display:inline;">
                         <input type="hidden" name="build_id" value="<?php echo (int)$selected_build['build_id']; ?>">
-                        <button type="submit" name="fork_build" class="btn btn-secondary">Fork Build</button>
+                        <button type="submit" name="fork_build" class="btn btn-secondary">🍴 Fork Build</button>
                     </form>
                 </div>
             <?php endif; ?>
@@ -405,9 +404,9 @@ renderHeader();
             <h3>Parts List</h3>
             <?php
             $stmt = $conn->prepare("
-                SELECT p.*, bp.position_data 
-                FROM build_parts bp 
-                JOIN parts p ON bp.part_id = p.part_id 
+                SELECT p.*, bp.position_data
+                FROM build_parts bp
+                JOIN parts p ON bp.part_id = p.part_id
                 WHERE bp.build_id = ?
             ");
             $stmt->bind_param("i", $selected_build['build_id']);
@@ -415,15 +414,15 @@ renderHeader();
             $parts = $stmt->get_result();
             ?>
             <?php while ($part = $parts->fetch_assoc()): ?>
-                <div style="background: var(--bg-primary); padding: 1rem; margin: 0.5rem 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--accent-1);">
-                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <strong style="font-size: 1.1rem; color: #fff;"><?php echo htmlspecialchars($part['name']); ?></strong>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="color: var(--accent-1); font-weight: bold;">$<?php echo number_format((float)$part['price'], 2); ?></span>
-                            <span style="color: #888; font-size: 0.85rem; text-transform: uppercase;">[<?php echo htmlspecialchars($part['position_data']); ?>]</span>
+                <div class="part-row">
+                    <div class="part-row-info">
+                        <span class="part-row-name"><?php echo htmlspecialchars($part['name']); ?></span>
+                        <div class="part-row-meta">
+                            <span class="part-row-price">$<?php echo number_format((float)$part['price'], 2); ?></span>
+                            <span class="part-row-position"><?php echo htmlspecialchars($part['position_data']); ?></span>
                         </div>
                     </div>
-                    <a href="/redirect.php?part_id=<?php echo (int)$part['part_id']; ?>" target="_blank" class="btn" style="min-width: 150px; text-align: center; background: transparent; border: 1px solid var(--accent-2); color: #fff; transition: all 0.3s ease;">VIEW PRODUCT</a>
+                    <a href="/redirect.php?part_id=<?php echo (int)$part['part_id']; ?>" target="_blank" class="btn btn-secondary btn-sm">View Product</a>
                 </div>
             <?php endwhile; ?>
         </div>
@@ -432,21 +431,23 @@ renderHeader();
             <h3>Comments</h3>
 
             <?php if (isLoggedIn()): ?>
-                <form method="POST" class="ajax-form main-comment-form" style="margin-bottom: 2rem;">
+                <form method="POST" class="ajax-form main-comment-form" style="margin-bottom: 1.5rem;">
                     <input type="hidden" name="ajax" value="1">
                     <input type="hidden" name="action" value="add_comment">
                     <input type="hidden" name="build_id" value="<?php echo (int)$selected_build['build_id']; ?>">
-                    <textarea name="content" placeholder="Add a comment..." required></textarea>
+                    <textarea name="content" placeholder="Share your thoughts on this build..." required style="margin-bottom: 0.5rem;"></textarea>
                     <button type="submit" class="btn">Post Comment</button>
                 </form>
+            <?php else: ?>
+                <p class="text-muted fs-085" style="margin-bottom: 1.5rem;"><a href="/user/login.php" class="accent-link">Sign in</a> to leave a comment.</p>
             <?php endif; ?>
 
             <?php
             $stmt = $conn->prepare("
-                SELECT c.*, u.username 
-                FROM comments c 
-                JOIN users u ON c.user_id = u.uid 
-                WHERE c.build_id = ? AND c.parent_comment_id IS NULL 
+                SELECT c.*, u.username
+                FROM comments c
+                JOIN users u ON c.user_id = u.uid
+                WHERE c.build_id = ? AND c.parent_comment_id IS NULL
                 ORDER BY c.date_posted DESC
             ");
             $stmt->bind_param("i", $selected_build['build_id']);
@@ -459,13 +460,14 @@ renderHeader();
                 <?php while ($comment = $comments->fetch_assoc()): ?>
                     <div class="comment">
                         <div class="comment-header">
-                            <a href="/public_profile.php?username=<?php echo urlencode($comment['username']); ?>" style="color: var(--accent-2); text-decoration: none;"><span class="comment-author"><?php echo htmlspecialchars($comment['username']); ?></span></a>
-                            <span style="font-size: 0.9rem; opacity: 0.7;"><?php echo date('M j, Y', strtotime($comment['date_posted'])); ?></span>
+                            <a href="/public_profile.php?username=<?php echo urlencode($comment['username']); ?>" class="creator-link"><span class="comment-author"><?php echo htmlspecialchars($comment['username']); ?></span></a>
+                            <span class="comment-date"><?php echo date('M j, Y', strtotime($comment['date_posted'])); ?></span>
                         </div>
                         <p><?php echo nl2br(htmlspecialchars($comment['content'])); ?></p>
 
                         <?php if (isLoggedIn()): ?>
-                            <button onclick="showReplyForm(<?php echo (int)$comment['comment_id']; ?>)" class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.9rem;">Reply</button>
+                            <div class="comment-actions">
+                                <button onclick="showReplyForm(<?php echo (int)$comment['comment_id']; ?>)" class="btn btn-secondary btn-sm">Reply</button>
 
                             <?php if ($user && ($comment['user_id'] == $_SESSION['user_id'] || isAdmin($user['email']))): ?>
                                 <form method="POST" class="ajax-form" style="display: inline;">
@@ -473,9 +475,10 @@ renderHeader();
                                     <input type="hidden" name="action" value="delete_comment">
                                     <input type="hidden" name="comment_id" value="<?php echo (int)$comment['comment_id']; ?>">
                                     <input type="hidden" name="build_id" value="<?php echo (int)$selected_build['build_id']; ?>">
-                                    <button type="submit" class="btn" style="background: #ef4444; padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="return confirm('Delete this comment?')">Delete</button>
+                                    <button type="submit" class="btn-danger-sm" onclick="return confirm('Delete this comment?')">Delete</button>
                                 </form>
                             <?php endif; ?>
+                            </div>
 
                             <div id="reply-form-<?php echo (int)$comment['comment_id']; ?>" style="display: none; margin-top: 1rem;">
                                 <form method="POST" class="ajax-form">
@@ -504,14 +507,16 @@ renderHeader();
                         $reply_count = count($replies_array);
                         ?>
 
-                        <button onclick="toggleReplies(<?php echo (int)$comment['comment_id']; ?>, this)" class="btn btn-secondary toggle-replies" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.9rem; <?php echo ($reply_count == 0) ? 'display:none;' : ''; ?>">Show Replies (<span id="reply-count-<?php echo (int)$comment['comment_id']; ?>"><?php echo $reply_count; ?></span>)</button>
+                        <?php if ($reply_count > 0): ?>
+                        <button onclick="toggleReplies(<?php echo (int)$comment['comment_id']; ?>, this)" class="btn btn-secondary btn-sm toggle-replies" style="margin-top: 0.5rem;">Show Replies (<span id="reply-count-<?php echo (int)$comment['comment_id']; ?>"><?php echo $reply_count; ?></span>)</button>
+                        <?php endif; ?>
 
                         <div id="replies-container-<?php echo (int)$comment['comment_id']; ?>" class="replies-container" style="display: none;">
                             <?php foreach ($replies_array as $reply): ?>
                                 <div class="comment reply">
                                     <div class="comment-header">
-                                        <a href="/public_profile.php?username=<?php echo urlencode($reply['username']); ?>" style="color: var(--accent-2); text-decoration: none;"><span class="comment-author"><?php echo htmlspecialchars($reply['username']); ?></span></a>
-                                        <span style="font-size: 0.9rem; opacity: 0.7;"><?php echo date('M j, Y', strtotime($reply['date_posted'])); ?></span>
+                                        <a href="/public_profile.php?username=<?php echo urlencode($reply['username']); ?>" class="creator-link"><span class="comment-author"><?php echo htmlspecialchars($reply['username']); ?></span></a>
+                                        <span class="comment-date"><?php echo date('M j, Y', strtotime($reply['date_posted'])); ?></span>
                                     </div>
                                     <p><?php echo nl2br(htmlspecialchars($reply['content'])); ?></p>
 
@@ -521,7 +526,7 @@ renderHeader();
                                             <input type="hidden" name="action" value="delete_comment">
                                             <input type="hidden" name="comment_id" value="<?php echo (int)$reply['comment_id']; ?>">
                                             <input type="hidden" name="build_id" value="<?php echo (int)$selected_build['build_id']; ?>">
-                                            <button type="submit" class="btn" style="background: #ef4444; padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="return confirm('Delete this reply?')">Delete</button>
+                                            <button type="submit" class="btn-danger-sm" onclick="return confirm('Delete this reply?')">Delete</button>
                                         </form>
                                     <?php endif; ?>
                                 </div>

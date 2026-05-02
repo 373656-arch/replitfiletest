@@ -136,206 +136,51 @@ require_once 'includes/headerFooter.php';
 renderHeader();
 ?>
 
-<style>
-    /* Status Styles */
-    .incompatible-badge { color: #ff4d4d; font-size: 0.8rem; font-weight: bold; margin-left: 10px; }
-    .summary-warning { color: #ff4d4d; font-weight: bold; margin-top: 5px; display: none; }
-    .build-item-row.is-incompatible { border-left: 3px solid #ff4d4d; background: rgba(255, 77, 77, 0.1); }
-
-    /* Button Styles */
-    .btn:disabled { background-color: #444 !important; color: #888 !important; cursor: not-allowed; opacity: 0.6; }
-    .btn-outline-danger { background: transparent; border: 1px solid #ff4d4d; color: #ff4d4d; margin-top: 10px; }
-    .btn-outline-danger:hover { background: #ff4d4d; color: #fff; }
-
-    /* Car Search Styles */
-    .car-search-wrapper { display: flex; flex-direction: column; gap: 10px; }
-    .car-search-filters { display: flex; gap: 10px; flex-wrap: wrap; }
-    .car-search-filters input { flex: 1; min-width: 160px; margin: 0; }
-    .car-results-list {
-        max-height: 260px;
-        overflow-y: auto;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        background: var(--bg-tertiary);
-    }
-    .car-result-item {
-        padding: 12px 16px;
-        cursor: pointer;
-        border-bottom: 1px solid var(--border-color);
-        transition: background 0.15s;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        color: var(--text-primary);
-    }
-    .car-result-item:last-child { border-bottom: none; }
-    .car-result-item:hover { background: var(--accent-1); color: #fff; }
-    .car-result-item .car-year-badge {
-        font-size: 0.8rem;
-        padding: 2px 8px;
-        border-radius: 20px;
-        background: rgba(255,255,255,0.12);
-        color: inherit;
-    }
-    .car-result-item:hover .car-year-badge { background: rgba(255,255,255,0.25); }
-    .car-no-results { padding: 16px; text-align: center; color: var(--text-secondary); }
-    .car-current-selection {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 10px 14px;
-        background: rgba(200,136,58,0.08);
-        border: 1px solid var(--accent-1);
-        border-radius: 8px;
-        color: var(--text-primary);
-    }
-    .car-clear-btn {
-        color: var(--accent-1);
-        text-decoration: none;
-        font-size: 0.85rem;
-        font-weight: bold;
-    }
-    .car-clear-btn:hover { color: #ff4d4d; }
-
-    /* Filter Toolbar Styles */
-    .filters-toolbar { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
-    .search-input { flex: 1; margin-bottom: 0; } /* Overwrite default mb */
-
-    /* Toggle Switch Style */
-    .toggle-container { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; user-select: none; }
-    .toggle-switch { position: relative; display: inline-block; width: 40px; height: 20px; }
-    .toggle-switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 20px; }
-    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-    input:checked + .slider { background-color: var(--accent-1); }
-    input:checked + .slider:before { transform: translateX(20px); }
-
-    /* Dropdown Styles */
-    .category-dropdown { position: relative; }
-    .filter-icon-btn { background: #333; border: 1px solid #555; color: #fff; padding: 8px 12px; cursor: pointer; border-radius: 4px; }
-    .dropdown-menu {
-        position: absolute; right: 0; top: 100%; z-index: 10;
-        background: #222; border: 1px solid #444; border-radius: 4px;
-        min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    }
-    .dropdown-item { padding: 10px; cursor: pointer; color: #ddd; border-bottom: 1px solid #333; }
-    .dropdown-item:hover { background: #333; color: #fff; }
-    .dropdown-item:last-child { border-bottom: none; }
-
-    .part-item { position: relative; }
-    .affiliate-link {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        color: var(--accent-1);
-        background: rgba(0,0,0,0.5);
-        padding: 5px;
-        border-radius: 4px;
-        line-height: 0;
-        transition: color 0.2s;
-        z-index: 2;
-    }
-    .affiliate-link:hover { color: #fff; background: var(--accent-1); }
-    .affiliate-link-mini { color: var(--accent-1); line-height: 0; display: flex; align-items: center; }
-    .affiliate-link-mini:hover { color: var(--text-primary); }
-
-    /* Ensure icon visibility in the card */
-    .part-item h4 { margin-right: 35px; } /* Make room for the top-right icon */
-
-    /* Landing Page Styles */
-    .landing-hero {
-        text-align: center;
-        padding: 4rem 1rem 3rem;
-    }
-    .landing-hero h1 {
-        font-size: 3rem;
-        color: var(--text-primary);
-        margin-bottom: 1rem;
-    }
-    .landing-hero p {
-        font-size: 1.15rem;
-        color: var(--text-secondary);
-        max-width: 600px;
-        margin: 0 auto 2rem;
-    }
-    .landing-features {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 1.5rem;
-        margin: 2.5rem 0;
-    }
-    .feature-card {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 1.5rem;
-        text-align: center;
-        transition: border-color 0.2s, transform 0.2s;
-    }
-    .feature-card:hover { border-color: var(--accent-1); transform: translateY(-3px); }
-    .feature-card .feature-icon { font-size: 2rem; margin-bottom: 0.75rem; }
-    .feature-card h4 { margin-bottom: 0.5rem; }
-    .feature-card p { font-size: 0.9rem; color: var(--text-secondary); margin: 0; }
-    .landing-highlights { margin: 2.5rem 0; }
-    .landing-highlights h3 { margin-bottom: 1.5rem; text-align: center; }
-    .highlights-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 1.25rem;
-    }
-    .highlight-card {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        overflow: hidden;
-        transition: border-color 0.2s;
-    }
-    .highlight-card:hover { border-color: var(--accent-1); }
-    .highlight-card-img {
-        height: 140px;
-        background: var(--bg-tertiary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--text-secondary);
-        font-size: 0.85rem;
-    }
-    .highlight-card-img img { width: 100%; height: 100%; object-fit: cover; }
-    .highlight-card-body { padding: 1rem; }
-    .highlight-card-body h4 { font-size: 1rem; margin-bottom: 0.25rem; }
-    .highlight-card-body p { font-size: 0.85rem; color: var(--text-secondary); margin: 0; }
-    .highlight-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; }
-    .divider { border: none; border-top: 1px solid var(--border-color); margin: 2.5rem 0; }
-
-</style>
 
 <?php if (!$selected_car): ?>
 <div class="container">
     <div class="landing-hero">
-        <h1>Mod Your Ride</h1>
-        <p>ModMyCar is the ultimate tool for car enthusiasts. Build your perfect setup, discover compatible parts, and share your builds with a growing community.</p>
-        <a href="#car-builder" class="btn" style="font-size:1.1rem; padding: 0.85rem 2.2rem;">Start Building</a>
-        <a href="/community.php" class="btn btn-secondary" style="font-size:1.1rem; padding: 0.85rem 2.2rem; margin-left: 0.75rem;">Browse Community</a>
+        <div class="section-label">The Car Enthusiast Platform</div>
+        <h1>Mod Your <span class="hero-accent">Ride</span></h1>
+        <p>Build your perfect setup, discover compatible parts, and share your builds with a growing community of car enthusiasts.</p>
+        <div class="hero-cta">
+            <a href="#car-builder" class="btn">Start Building</a>
+            <a href="/community.php" class="btn btn-secondary">Browse Community</a>
+        </div>
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="hero-stat-number">6+</div>
+                <div class="hero-stat-label">Part Categories</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-number">100%</div>
+                <div class="hero-stat-label">Compatibility Checked</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-number">Free</div>
+                <div class="hero-stat-label">Always</div>
+            </div>
+        </div>
     </div>
 
     <div class="landing-features">
         <div class="feature-card">
-            <div class="feature-icon">🔧</div>
-            <h4>Drag & Drop Builder</h4>
+            <span class="feature-icon">🔧</span>
+            <h4>Drag &amp; Drop Builder</h4>
             <p>Assemble your build visually. Add compatible parts with a simple drag and drop interface.</p>
         </div>
         <div class="feature-card">
-            <div class="feature-icon">⚡</div>
+            <span class="feature-icon">⚡</span>
             <h4>HP Estimator</h4>
             <p>See how each modification affects your estimated horsepower in real time.</p>
         </div>
         <div class="feature-card">
-            <div class="feature-icon">🤝</div>
+            <span class="feature-icon">🤝</span>
             <h4>Community Builds</h4>
             <p>Share your setups, like others' builds, and fork any community build as your starting point.</p>
         </div>
         <div class="feature-card">
-            <div class="feature-icon">✅</div>
+            <span class="feature-icon">✅</span>
             <h4>Compatibility Check</h4>
             <p>Parts are filtered by engine and chassis code so you only see what fits your car.</p>
         </div>
@@ -346,7 +191,7 @@ renderHeader();
         <h3>🔥 Trending Community Builds</h3>
         <div class="highlights-grid">
             <?php foreach ($community_highlights as $hl): ?>
-            <a href="/community.php?build=<?= (int)$hl['build_id']; ?>" class="highlight-card" style="text-decoration:none; color:inherit;">
+            <a href="/community.php?build=<?= (int)$hl['build_id']; ?>" class="highlight-card">
                 <div class="highlight-card-img">
                     <?php if (!empty($hl['featured_image'])): ?>
                         <img src="<?= htmlspecialchars($hl['featured_image']); ?>" alt="Build">
@@ -358,8 +203,8 @@ renderHeader();
                     <h4><?= htmlspecialchars($hl['build_title']); ?></h4>
                     <p><?= htmlspecialchars($hl['car_name']); ?> &bull; by <?= htmlspecialchars($hl['username']); ?></p>
                     <div class="highlight-meta">
-                        <span style="color:var(--accent-1); font-weight:bold;">$<?= number_format((float)$hl['total_price'], 0); ?></span>
-                        <span style="color:var(--text-secondary); font-size:0.85rem;">👍 <?= (int)$hl['likes_count']; ?></span>
+                        <span class="text-accent fw-700">$<?= number_format((float)$hl['total_price'], 0); ?></span>
+                        <span class="text-muted">👍 <?= (int)$hl['likes_count']; ?></span>
                     </div>
                 </div>
             </a>

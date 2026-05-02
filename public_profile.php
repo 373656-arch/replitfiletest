@@ -52,23 +52,23 @@ renderHeader();
 ?>
 
 <div class="container">
-    <a href="/community.php" class="btn btn-secondary" style="margin-bottom: 1rem;">← Back to Community</a>
+    <a href="/community.php" class="back-link">← Back to Community</a>
 
     <div class="profile-header">
         <?php if ($viewed_user['profileImage']): ?>
             <img src="<?php echo htmlspecialchars($viewed_user['profileImage']); ?>" alt="Profile" class="profile-image">
         <?php else: ?>
-            <div class="profileImage" style="background: var(--accent-1); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: white;">
+            <div class="profile-image-placeholder">
                 <?php echo strtoupper(substr($viewed_user['username'], 0, 1)); ?>
             </div>
         <?php endif; ?>
         <div>
-            <h2><?php echo htmlspecialchars($viewed_user['username']); ?></h2>
-            <p style="color: var(--text-secondary);">Community Member</p>
+            <h2 style="margin-bottom: 0.25rem;"><?php echo htmlspecialchars($viewed_user['username']); ?></h2>
+            <p class="text-muted">Community Member</p>
         </div>
     </div>
 
-    <div style="margin-top: 2rem;">
+    <div class="mt-2">
         <h3>Public Builds</h3>
         <?php if ($user_builds && $user_builds->num_rows > 0): ?>
             <div class="community-grid">
@@ -77,26 +77,25 @@ renderHeader();
                         <?php if ($build['featured_image']): ?>
                             <img src="<?php echo htmlspecialchars($build['featured_image']); ?>" alt="Build">
                         <?php else: ?>
-                            <div style="height: 250px; background: var(--bg-primary); display: flex; align-items: center; justify-content: center;">
-                                <span>No Image</span>
-                            </div>
+                            <div class="img-placeholder">No Image</div>
                         <?php endif; ?>
                         <div class="build-card-content">
                             <h3><?php echo htmlspecialchars($build['build_title']); ?></h3>
-                            <p><?php echo htmlspecialchars($build['car_name']); ?></p>
-                            <p class="price" style="color: var(--accent-1); font-weight: bold;">$<?php echo number_format($build['total_price'], 2); ?></p>
-                            <p>👍 <?php echo (int)$build['likes_count']; ?> likes</p>
+                            <p class="text-muted"><?php echo htmlspecialchars($build['car_name']); ?></p>
+                            <p class="price-bold">$<?php echo number_format($build['total_price'], 2); ?></p>
+                            <p class="text-muted fs-085">👍 <?php echo (int)$build['likes_count']; ?> likes</p>
                             <div class="build-actions">
-                                <a href="/community.php?build=<?php echo (int)$build['build_id']; ?>" class="btn">View Details</a>
+                                <a href="/community.php?build=<?php echo (int)$build['build_id']; ?>" class="btn btn-sm">View Details</a>
                             </div>
                         </div>
                     </div>
                 <?php endwhile; ?>
             </div>
         <?php else: ?>
-            <p style="text-align: center; padding: 2rem; background: var(--bg-primary); border-radius: 5px;">
-                This user hasn't shared any builds with the community yet.
-            </p>
+            <div class="empty-state">
+                <p class="empty-state-text">No public builds yet</p>
+                <p class="empty-state-subtext">This user hasn't shared any builds with the community.</p>
+            </div>
         <?php endif; ?>
     </div>
 </div>
