@@ -125,13 +125,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
 
 // Fetch community highlights for landing page
 $community_highlights = [];
-$site_stats = ['builds' => 0, 'parts' => 0, 'members' => 0];
 if (!$selected_car) {
     $ch = $conn->query("SELECT b.build_id, b.build_title, b.total_price, b.likes_count, b.featured_image, c.name as car_name, u.username FROM builds b JOIN cars c ON b.car_id = c.car_id JOIN users u ON b.user_id = u.uid WHERE b.is_community_shared = 1 ORDER BY b.likes_count DESC, b.date_created DESC LIMIT 3");
     if ($ch) $community_highlights = $ch->fetch_all(MYSQLI_ASSOC);
 
-    $stats_q = $conn->query("SELECT (SELECT COUNT(*) FROM builds) as builds, (SELECT COUNT(*) FROM parts) as parts, (SELECT COUNT(*) FROM users) as members");
-    if ($stats_q) $site_stats = $stats_q->fetch_assoc();
 }
 
 $pageTitle = $selected_car ? "Build Your Car - ModMyCar" : "ModMyCar — Mod Your Ride";
@@ -310,33 +307,6 @@ renderHeader();
     .highlight-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; }
     .divider { border: none; border-top: 1px solid var(--border-color); margin: 2.5rem 0; }
 
-    /* Stats Bar */
-    .stats-bar {
-        display: flex;
-        justify-content: center;
-        gap: 3rem;
-        padding: 1.75rem 1rem;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        margin: 0 0 2.5rem;
-        flex-wrap: wrap;
-    }
-    .stat-item { text-align: center; }
-    .stat-number {
-        font-size: 2rem;
-        font-weight: 800;
-        color: var(--accent-1);
-        letter-spacing: -0.03em;
-        line-height: 1;
-    }
-    .stat-label {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        margin-top: 0.25rem;
-    }
 </style>
 
 <?php if (!$selected_car): ?>
@@ -346,21 +316,6 @@ renderHeader();
         <p>ModMyCar is the ultimate tool for car enthusiasts. Build your perfect setup, discover compatible parts, and share your builds with a growing community.</p>
         <a href="#car-builder" class="btn" style="font-size:1.1rem; padding: 0.85rem 2.2rem;">Start Building</a>
         <a href="/community.php" class="btn btn-secondary" style="font-size:1.1rem; padding: 0.85rem 2.2rem; margin-left: 0.75rem;">Browse Community</a>
-    </div>
-
-    <div class="stats-bar">
-        <div class="stat-item">
-            <div class="stat-number" data-target="<?= (int)$site_stats['builds']; ?>">0</div>
-            <div class="stat-label">Builds Created</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-number" data-target="<?= (int)$site_stats['parts']; ?>">0</div>
-            <div class="stat-label">Parts Listed</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-number" data-target="<?= (int)$site_stats['members']; ?>">0</div>
-            <div class="stat-label">Members</div>
-        </div>
     </div>
 
     <div class="landing-features">
@@ -970,26 +925,6 @@ if (PREFILL_PARTS && PREFILL_PARTS.length > 0) {
 fetchStockHP();
 <?php endif; ?>
 
-// --- Stats Count-Up Animation ---
-(function() {
-    const counters = document.querySelectorAll('.stat-number[data-target]');
-    if (!counters.length) return;
-    const duration = 1200;
-    const easeOut = t => 1 - Math.pow(1 - t, 3);
-    counters.forEach(el => {
-        const target = parseInt(el.dataset.target, 10) || 0;
-        if (target === 0) { el.textContent = '0'; return; }
-        const start = performance.now();
-        function update(now) {
-            const elapsed = now - start;
-            const progress = Math.min(elapsed / duration, 1);
-            el.textContent = Math.floor(easeOut(progress) * target).toLocaleString();
-            if (progress < 1) requestAnimationFrame(update);
-            else el.textContent = target.toLocaleString();
-        }
-        requestAnimationFrame(update);
-    });
-})();
 </script>
 
 <?php renderFooter(); ?>
