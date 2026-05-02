@@ -1,0 +1,105 @@
+This document outlines current user experience issues, broken functionality, and proposed feature additions for the ModMyCar platform. It is intended to support debugging, system improvements, and future development planning.
+
+2. Current System Issues (Bug Report)
+2.1 Forking System Issues
+Forking a build does not correctly carry over saved parts.
+When forking from community builds, users are not taken into an editing environment with preloaded parts.
+Forked builds result in empty or reset part lists.
+Editing a build from the user profile also results in missing parts or reset build state.
+
+2.2 Click Tracking Issues
+Click logs are not consistently recorded across the platform.
+Some affiliate/part clicks are not being stored in the database.
+Tracking is unreliable depending on where the click originates.
+
+2.3 Community Features Issues
+Liking community posts is not functioning.
+Share-to-community feature is missing or no longer accessible.
+Community interaction features are incomplete or broken.
+
+2.4 Build Editing Issues
+Edit button does not function correctly.
+Instead of editing an existing build, it redirects users to a new build page.
+Editing does not preserve:
+Selected parts
+Images
+Build configuration
+
+2.5 UI / Navigation Issues
+Loading screen appears when navigating back unnecessarily.
+Theme settings appear multiple times in settings menu.
+User interface inconsistencies across pages.
+
+2.6 Image System Issues
+Build images can only be added by administrators.
+Regular users cannot upload or assign images to builds.
+No fallback/default image system exists for builds without images.
+
+3. Required Feature Improvements
+3.1 Landing Page
+Add a proper landing page to index.php.
+Landing page should include:
+Introduction to platform
+Navigation to build system
+Community highlights
+
+3.2 Admin Dashboard
+Create a dedicated admin dashboard.
+Admin dashboard should allow:
+Managing users
+Managing builds
+Viewing system analytics
+Managing affiliate sources and parts
+
+3.3 Affiliate System Cleanup
+Evaluate current affiliate_sources usage.
+Options:
+Improve and fully integrate affiliate system, OR
+Remove it if unnecessary complexity
+Ensure system is consistent and not partially implemented.
+
+3.4 Feedback & Notifications System
+Add a user feedback system.
+Users should be able to submit feedback.
+Users should receive notifications for:
+Build interactions (likes, comments)
+Community activity
+System updates
+
+3.5 Build Saving Improvements
+When saving a build, users should be able to:
+Add a build name
+Upload or select a build image
+If no image is provided:
+Assign a default placeholder image (e.g., stock car image)
+
+3.6 Default Image System
+Implement fallback image for builds.
+Applies when:
+No image is uploaded
+No featured image exists
+
+4. Expected System Behavior (Target State)
+4.1 Forking System
+Forked builds should:
+Load original car selection
+Load all saved parts
+Open directly in build editor
+4.2 Editing System
+Edit button should:
+Load existing build state
+Preserve all parts and configuration
+Allow modification and re-saving
+4.3 Community System
+Users should be able to:
+Like posts
+Share builds to community
+View updated interaction counts in real time
+4.4 Click Tracking
+Every affiliate or part click should:
+Be logged reliably
+Store user ID (if logged in)
+Store IP address fallback
+
+5. Summary
+The current system has strong foundational structure but suffers from broken state persistence, incomplete community features, and inconsistent user flows. Priority should be placed on fixing build state handling (fork/edit), restoring community interactions, and stabilizing tracking systems before expanding new features.
