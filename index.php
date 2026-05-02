@@ -399,8 +399,8 @@ renderHeader();
 
         <div class="car-search-wrapper">
             <div class="car-search-filters">
-                <input type="text" id="carBrandSearch" placeholder="Search brand (e.g. Honda, Toyota...)" oninput="filterCars()" autocomplete="off">
-                <input type="text" id="carYearSearch" placeholder="Year (e.g. 2020)" oninput="filterCars()" autocomplete="off" style="max-width: 140px;">
+                <input type="text" id="carBrandSearch" placeholder="Search brand (e.g. Honda, Toyota...)" oninput="filterCars()" onfocus="filterCars()" autocomplete="off">
+                <input type="text" id="carYearSearch" placeholder="Year (e.g. 2020)" oninput="filterCars()" onfocus="filterCars()" autocomplete="off" style="max-width: 140px;">
             </div>
             <?php if ($selected_car): ?>
                 <div class="car-current-selection">
@@ -544,14 +544,8 @@ function filterCars() {
     const year  = document.getElementById('carYearSearch').value.trim();
     const list  = document.getElementById('carResultsList');
 
-    if (!brand && !year) {
-        list.style.display = 'none';
-        list.innerHTML = '';
-        return;
-    }
-
     const filtered = ALL_CARS.filter(c => {
-        const brandMatch = !brand || c.brand.toLowerCase().includes(brand);
+        const brandMatch = !brand || c.brand.toLowerCase().includes(brand) || c.model.toLowerCase().includes(brand) || c.name.toLowerCase().includes(brand);
         const yearMatch  = !year  || String(c.year).startsWith(year);
         return brandMatch && yearMatch;
     });
@@ -567,6 +561,14 @@ function filterCars() {
     }
     list.style.display = 'block';
 }
+
+document.addEventListener('click', function(e) {
+    const wrapper = document.querySelector('.car-search-wrapper');
+    const list = document.getElementById('carResultsList');
+    if (wrapper && list && !wrapper.contains(e.target)) {
+        list.style.display = 'none';
+    }
+});
 
 function selectCar(carId) {
     document.getElementById('carIdInput').value = carId;
