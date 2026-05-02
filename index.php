@@ -1,7 +1,42 @@
 <?php
 require_once 'config.php';
 
-// Prefill logic
+// Handle "Edit" button from profile — load an existing build into prefill
+if (!empty($_GET['load_build']) && isLoggedIn()) {
+    $load_id = (int)$_GET['load_build'];
+    $stmt = $conn->prepare("SELECT b.*, GROUP_CONCAT(bp.part_id) as part_ids FROM builds b LEFT JOIN build_parts bp ON b.build_id = bp.build_id WHERE b.build_id = ? AND b.user_id = ? GROUP BY b.build_id");
+    $stmt->bind_param("ii", $load_id, $_SESSION['user_id']);
+    $stmt->execute();
+    $lb = $stmt->get_result()->fetch_assoc();
+    if ($lb) {
+        // Load full part details for prefill
+        $pstmt = $conn->prepare("SELECT p.part_id, p.name, p.price, p.link, bp.position_data FROM build_parts bp JOIN parts p ON bp.part_id = p.part_id WHERE bp.build_id = ?");
+        $pstmt->bind_param("i", $load_id);
+        $pstmt->execute();
+        $pres = $pstmt->get_result();
+        $prefill_parts_load = [];
+        while ($pr = $pres->fetch_assoc()) {
+            $prefill_parts_load[] = [
+                'part_id'  => (int)$pr['part_id'],
+                'name'     => $pr['name'],
+                'price'    => (float)$pr['price'],
+                'link'     => $pr['link'] ?? '',
+                'position' => $pr['position_data'] ?? 'general',
+            ];
+        }
+        $_SESSION['prefill_build'] = [
+            'car_id'       => (int)$lb['car_id'],
+            'parts'        => $prefill_parts_load,
+            'build_title'  => $lb['build_title'],
+            'is_edit'      => true,
+            'build_id'     => $load_id,
+        ];
+        header('Location: /index.php');
+        exit;
+    }
+}
+
+// Prefill logic (fork or edit redirect)
 $prefill_build = null;
 if (!empty($_SESSION['prefill_build'])) {
     $prefill_build = $_SESSION['prefill_build'];
@@ -18,9 +53,13 @@ if (!empty($_GET['share_build'])) {
 }
 
 $prefill_parts_json = $prefill_build ? json_encode($prefill_build['parts'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : 'null';
+$prefill_title = $prefill_build['build_title'] ?? '';
 
 $cars = $conn->query("SELECT * FROM cars ORDER BY brand, model, year");
-$selected_car_id = $_GET['car_id'] ?? ($_SESSION['selected_car_id'] ?? null);
+// Only read GET/session car_id if prefill hasn't already set one
+if (empty($selected_car_id)) {
+    $selected_car_id = $_GET['car_id'] ?? ($_SESSION['selected_car_id'] ?? null);
+}
 
 if ($selected_car_id) {
     $_SESSION['selected_car_id'] = $selected_car_id;
@@ -54,16 +93,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
     if ($stmt->execute()) {
         $build_id = $conn->insert_id;
         foreach ($build_data as $item) {
-            $stmt = $conn->prepare("INSERT INTO build_parts (build_id, part_id, position_data) VALUES (?, ?, ?)");
-            $stmt->bind_param("iis", $build_id, $item['part_id'], $item['position']);
-            $stmt->execute();
+            $stmt2 = $conn->prepare("INSERT INTO build_parts (build_id, part_id, position_data) VALUES (?, ?, ?)");
+            $stmt2->bind_param("iis", $build_id, $item['part_id'], $item['position']);
+            $stmt2->execute();
         }
+
+        // Handle optional image upload
+        if (!empty($_FILES['build_image']['name']) && $_FILES['build_image']['error'] === UPLOAD_ERR_OK) {
+            $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime = finfo_file($finfo, $_FILES['build_image']['tmp_name']);
+            finfo_close($finfo);
+            if (in_array($mime, $allowed_types)) {
+                $ext = pathinfo($_FILES['build_image']['name'], PATHINFO_EXTENSION);
+                $filename = 'build_' . $build_id . '_' . time() . '.' . strtolower($ext);
+                $dest = __DIR__ . '/uploads/' . $filename;
+                if (move_uploaded_file($_FILES['build_image']['tmp_name'], $dest)) {
+                    $img_path = '/uploads/' . $filename;
+                    $upd = $conn->prepare("UPDATE builds SET featured_image = ? WHERE build_id = ?");
+                    $upd->bind_param("si", $img_path, $build_id);
+                    $upd->execute();
+                }
+            }
+        }
+
+        $_SESSION['build_saved_success'] = true;
         header('Location: /user/profile.php');
         exit;
     }
 }
 
-$pageTitle = "Build Your Car - ModMyCar";
+// Fetch community highlights for landing page
+$community_highlights = [];
+if (!$selected_car) {
+    $ch = $conn->query("SELECT b.build_id, b.build_title, b.total_price, b.likes_count, b.featured_image, c.name as car_name, u.username FROM builds b JOIN cars c ON b.car_id = c.car_id JOIN users u ON b.user_id = u.uid WHERE b.is_community_shared = 1 ORDER BY b.likes_count DESC, b.date_created DESC LIMIT 3");
+    if ($ch) $community_highlights = $ch->fetch_all(MYSQLI_ASSOC);
+}
+
+$pageTitle = $selected_car ? "Build Your Car - ModMyCar" : "ModMyCar — Mod Your Ride";
 require_once 'includes/headerFooter.php';
 renderHeader();
 ?>
@@ -173,10 +240,145 @@ renderHeader();
 
     /* Ensure icon visibility in the card */
     .part-item h4 { margin-right: 35px; } /* Make room for the top-right icon */
+
+    /* Landing Page Styles */
+    .landing-hero {
+        text-align: center;
+        padding: 4rem 1rem 3rem;
+    }
+    .landing-hero h1 {
+        font-size: 3rem;
+        background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 1rem;
+    }
+    .landing-hero p {
+        font-size: 1.15rem;
+        color: var(--text-secondary);
+        max-width: 600px;
+        margin: 0 auto 2rem;
+    }
+    .landing-features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        margin: 2.5rem 0;
+    }
+    .feature-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: border-color 0.2s, transform 0.2s;
+    }
+    .feature-card:hover { border-color: var(--accent-1); transform: translateY(-3px); }
+    .feature-card .feature-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+    .feature-card h4 { margin-bottom: 0.5rem; }
+    .feature-card p { font-size: 0.9rem; color: var(--text-secondary); margin: 0; }
+    .landing-highlights { margin: 2.5rem 0; }
+    .landing-highlights h3 { margin-bottom: 1.5rem; text-align: center; }
+    .highlights-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1.25rem;
+    }
+    .highlight-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        overflow: hidden;
+        transition: border-color 0.2s;
+    }
+    .highlight-card:hover { border-color: var(--accent-1); }
+    .highlight-card-img {
+        height: 140px;
+        background: var(--bg-tertiary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+    .highlight-card-img img { width: 100%; height: 100%; object-fit: cover; }
+    .highlight-card-body { padding: 1rem; }
+    .highlight-card-body h4 { font-size: 1rem; margin-bottom: 0.25rem; }
+    .highlight-card-body p { font-size: 0.85rem; color: var(--text-secondary); margin: 0; }
+    .highlight-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; }
+    .divider { border: none; border-top: 1px solid var(--border-color); margin: 2.5rem 0; }
 </style>
 
+<?php if (!$selected_car): ?>
 <div class="container">
+    <div class="landing-hero">
+        <h1>Mod Your Ride</h1>
+        <p>ModMyCar is the ultimate tool for car enthusiasts. Build your perfect setup, discover compatible parts, and share your builds with a growing community.</p>
+        <a href="#car-builder" class="btn" style="font-size:1.1rem; padding: 0.85rem 2.2rem;">Start Building</a>
+        <a href="/community.php" class="btn btn-secondary" style="font-size:1.1rem; padding: 0.85rem 2.2rem; margin-left: 0.75rem;">Browse Community</a>
+    </div>
+
+    <div class="landing-features">
+        <div class="feature-card">
+            <div class="feature-icon">🔧</div>
+            <h4>Drag & Drop Builder</h4>
+            <p>Assemble your build visually. Add compatible parts with a simple drag and drop interface.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h4>HP Estimator</h4>
+            <p>See how each modification affects your estimated horsepower in real time.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🤝</div>
+            <h4>Community Builds</h4>
+            <p>Share your setups, like others' builds, and fork any community build as your starting point.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">✅</div>
+            <h4>Compatibility Check</h4>
+            <p>Parts are filtered by engine and chassis code so you only see what fits your car.</p>
+        </div>
+    </div>
+
+    <?php if (!empty($community_highlights)): ?>
+    <div class="landing-highlights">
+        <h3>🔥 Trending Community Builds</h3>
+        <div class="highlights-grid">
+            <?php foreach ($community_highlights as $hl): ?>
+            <a href="/community.php?build=<?= (int)$hl['build_id']; ?>" class="highlight-card" style="text-decoration:none; color:inherit;">
+                <div class="highlight-card-img">
+                    <?php if (!empty($hl['featured_image'])): ?>
+                        <img src="<?= htmlspecialchars($hl['featured_image']); ?>" alt="Build">
+                    <?php else: ?>
+                        <span>No Image</span>
+                    <?php endif; ?>
+                </div>
+                <div class="highlight-card-body">
+                    <h4><?= htmlspecialchars($hl['build_title']); ?></h4>
+                    <p><?= htmlspecialchars($hl['car_name']); ?> &bull; by <?= htmlspecialchars($hl['username']); ?></p>
+                    <div class="highlight-meta">
+                        <span style="color:var(--accent-1); font-weight:bold;">$<?= number_format((float)$hl['total_price'], 0); ?></span>
+                        <span style="color:var(--text-secondary); font-size:0.85rem;">👍 <?= (int)$hl['likes_count']; ?></span>
+                    </div>
+                </div>
+            </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <hr class="divider" id="car-builder">
+</div>
+<?php endif; ?>
+
+<div class="container">
+    <?php if ($selected_car): ?>
     <h2>Build Your Dream Car</h2>
+    <?php else: ?>
+    <h2>Select Your Car to Start</h2>
+    <?php endif; ?>
 
     <div class="card">
         <h3>Select Your Car</h3>
@@ -280,7 +482,7 @@ renderHeader();
                             <p class="price">$<?= number_format($part['price'], 2); ?></p>
 
                             <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
-                                <a href="<?= $full_link; ?>" target="_blank" class="btn btn-sm" style="width: 80px; text-align: center; text-decoration: none; background: #2196F3; color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">View</a>
+                                <a href="/redirect.php?part_id=<?= (int)$part['part_id']; ?>" target="_blank" class="btn btn-sm" style="width: 80px; text-align: center; text-decoration: none; background: #2196F3; color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">View</a>
                             </div>
 
                            
@@ -317,8 +519,17 @@ renderHeader();
     <div class="modal-content">
         <span class="close" onclick="document.getElementById('saveModal').classList.remove('active')">&times;</span>
         <h3>Save Your Build</h3>
-        <form method="POST" onsubmit="prepareBuildData()">
-            <input type="text" name="build_title" required placeholder="Build Title">
+        <form method="POST" enctype="multipart/form-data" onsubmit="prepareBuildData()">
+            <input type="text" name="build_title" id="saveBuildTitle" required placeholder="Build Title" value="<?= htmlspecialchars($prefill_title, ENT_QUOTES); ?>">
+            <div style="margin: 12px 0;">
+                <label style="display:block; margin-bottom:6px; font-size:0.9rem; color:var(--text-secondary);">Build Image (optional)</label>
+                <input type="file" name="build_image" accept="image/*" style="color:var(--text-primary);">
+                <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;">Leave blank to use a default placeholder image.</p>
+            </div>
+            <label style="display:flex; align-items:center; gap:10px; margin:12px 0; cursor:pointer;">
+                <input type="checkbox" name="share_community" id="shareCommunityCheck" style="width:16px; height:16px;">
+                <span style="font-size:0.9rem;">Share with Community</span>
+            </label>
             <input type="hidden" name="total_price" id="saveTotalPrice">
             <input type="hidden" name="build_data" id="saveBuildData">
             <input type="hidden" name="estimated_hp" id="saveEstimatedHP">
@@ -680,6 +891,32 @@ function prepareBuildData() {
     const hpText = document.getElementById('estimatedHP').textContent;
     const hpVal = parseInt(hpText, 10);
     document.getElementById('saveEstimatedHP').value = isNaN(hpVal) ? '' : hpVal;
+}
+
+// --- Prefill Parts from Fork / Edit ---
+const PREFILL_PARTS = <?= $prefill_parts_json; ?>;
+if (PREFILL_PARTS && PREFILL_PARTS.length > 0) {
+    PREFILL_PARTS.forEach(prefillPart => {
+        // Try to look up full details (link, compatibility) from the rendered DOM
+        const domPart = document.querySelector(`.part-item[data-part-id="${prefillPart.part_id}"]`);
+        let link = prefillPart.link || '';
+        let isCompatible = true;
+        if (domPart) {
+            const d = domPart.dataset;
+            link = d.link || link;
+            isCompatible = checkPartCompatibility(d.engine, d.chassis, parseInt(d.yearStart), parseInt(d.yearEnd));
+        }
+        buildParts.push({
+            part_id: String(prefillPart.part_id),
+            name: prefillPart.name,
+            price: prefillPart.price,
+            link: link,
+            position: prefillPart.position || 'general',
+            isCompatible: isCompatible
+        });
+    });
+    updateBuildDisplay();
+    filterParts();
 }
 
 // --- Page Init ---

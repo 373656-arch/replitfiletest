@@ -135,9 +135,7 @@ function renderFooter() {
                 });
             }
 
-            window.addEventListener('beforeunload', function() {
-                loader.classList.add('active');
-            });
+            // Do NOT show loader on beforeunload — it triggers on back/forward navigation too
         </script>
     </body>
     </html>

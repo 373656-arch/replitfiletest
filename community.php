@@ -219,7 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $original_build = $original_build_result->fetch_assoc();
-        $stmt = $conn->prepare("SELECT p.part_id, p.name, p.price, bp.position_data FROM build_parts bp JOIN parts p ON bp.part_id = p.part_id WHERE bp.build_id = ?");
+        $stmt = $conn->prepare("SELECT p.part_id, p.name, p.price, p.link, bp.position_data FROM build_parts bp JOIN parts p ON bp.part_id = p.part_id WHERE bp.build_id = ?");
         $stmt->bind_param("i", $original_build_id);
         $stmt->execute();
         $parts_result = $stmt->get_result();
@@ -231,6 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'part_id' => (int)$p['part_id'],
                     'name'    => $p['name'],
                     'price'   => (float)$p['price'],
+                    'link'    => $p['link'] ?? '',
                     'position'=> $p['position_data'] ?? 'general'
                 ];
             }
