@@ -89,11 +89,11 @@ function renderHeader() {
 function renderFooter() {
     ?>
         </main>
-        <footer style="padding: 2rem 0; text-align: center; border-top: 1px solid #333; margin-top: 3rem;">
-            <p style="margin-bottom: 0.5rem; color: #aaa;">&copy; <?php echo date('Y'); ?> modmycar</p>
+        <footer>
+            <p style="margin-bottom: 0.75rem;">&copy; <?php echo date('Y'); ?> modmycar</p>
             <div style="display: flex; justify-content: center; gap: 1.5rem; font-size: 0.9rem;">
-                <a href="/contact.php" style="color: #888; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'">Contact Us</a>
-                <a href="/faq.php" style="color: #888; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'">Need Help?</a>
+                <a href="/contact.php" style="color: var(--text-secondary); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">Contact Us</a>
+                <a href="/faq.php" style="color: var(--text-secondary); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">Need Help?</a>
             </div>
         </footer>
         <script>

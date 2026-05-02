@@ -183,7 +183,7 @@ renderHeader();
         align-items: center;
         justify-content: space-between;
         padding: 10px 14px;
-        background: rgba(6,182,212,0.1);
+        background: rgba(200,136,58,0.08);
         border: 1px solid var(--accent-1);
         border-radius: 8px;
         color: var(--text-primary);
@@ -206,7 +206,7 @@ renderHeader();
     .toggle-switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 20px; }
     .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-    input:checked + .slider { background-color: #2196F3; }
+    input:checked + .slider { background-color: var(--accent-1); }
     input:checked + .slider:before { transform: translateX(20px); }
 
     /* Dropdown Styles */
@@ -226,17 +226,17 @@ renderHeader();
         position: absolute;
         top: 10px;
         right: 10px;
-        color: #2196F3;
-        background: rgba(0,0,0,0.6);
+        color: var(--accent-1);
+        background: rgba(0,0,0,0.5);
         padding: 5px;
         border-radius: 4px;
         line-height: 0;
         transition: color 0.2s;
         z-index: 2;
     }
-    .affiliate-link:hover { color: #fff; background: #2196F3; }
-    .affiliate-link-mini { color: #2196F3; line-height: 0; display: flex; align-items: center; }
-    .affiliate-link-mini:hover { color: #fff; }
+    .affiliate-link:hover { color: #fff; background: var(--accent-1); }
+    .affiliate-link-mini { color: var(--accent-1); line-height: 0; display: flex; align-items: center; }
+    .affiliate-link-mini:hover { color: var(--text-primary); }
 
     /* Ensure icon visibility in the card */
     .part-item h4 { margin-right: 35px; } /* Make room for the top-right icon */
@@ -248,10 +248,7 @@ renderHeader();
     }
     .landing-hero h1 {
         font-size: 3rem;
-        background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: var(--text-primary);
         margin-bottom: 1rem;
     }
     .landing-hero p {
@@ -482,7 +479,7 @@ renderHeader();
                             <p class="price">$<?= number_format($part['price'], 2); ?></p>
 
                             <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
-                                <a href="/redirect.php?part_id=<?= (int)$part['part_id']; ?>" target="_blank" class="btn btn-sm" style="width: 80px; text-align: center; text-decoration: none; background: #2196F3; color: white; padding: 5px; border-radius: 4px; font-size: 0.8rem;">View</a>
+                                <a href="/redirect.php?part_id=<?= (int)$part['part_id']; ?>" target="_blank" class="btn btn-sm" style="width: 80px; text-align: center; text-decoration: none; background: var(--accent-1); color: #fff; padding: 5px; border-radius: 4px; font-size: 0.8rem;">View</a>
                             </div>
 
                            
