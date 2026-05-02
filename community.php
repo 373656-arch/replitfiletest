@@ -283,7 +283,7 @@ renderHeader();
     <?php if (!$selected_build): ?>
         <div class="card">
             <h3>Filter Builds</h3>
-            <form method="GET" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <form method="GET" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
                 <div>
                     <select name="filter_car">
                         <option value="">All Cars</option>
@@ -307,12 +307,27 @@ renderHeader();
                 </div>
                 <button type="submit" class="btn">Apply Filters</button>
             </form>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                <input type="text" id="communitySearch" placeholder="Search builds or cars..." style="flex: 1; min-width: 200px; margin: 0;" oninput="filterCommunity()">
+                <select id="communitySort" onchange="filterCommunity()" style="margin: 0; min-width: 160px;">
+                    <option value="likes">Most Liked</option>
+                    <option value="newest">Newest First</option>
+                    <option value="price_asc">Lowest Price</option>
+                    <option value="price_desc">Highest Price</option>
+                </select>
+            </div>
         </div>
 
-        <div class="community-grid">
+        <div class="community-grid" id="communityGrid">
             <?php if ($community_builds && $community_builds->num_rows > 0): ?>
                 <?php while ($build = $community_builds->fetch_assoc()): ?>
-                    <div class="build-card">
+                    <div class="build-card"
+                         data-title="<?php echo htmlspecialchars(strtolower($build['build_title'])); ?>"
+                         data-car="<?php echo htmlspecialchars(strtolower($build['car_name'])); ?>"
+                         data-creator="<?php echo htmlspecialchars(strtolower($build['creator_name'])); ?>"
+                         data-likes="<?php echo (int)$build['likes_count']; ?>"
+                         data-price="<?php echo (float)$build['total_price']; ?>"
+                         data-date="<?php echo strtotime($build['date_created'] ?? 'now'); ?>">
                         <?php if (!empty($build['featured_image'])): ?>
                             <img src="<?php echo htmlspecialchars($build['featured_image']); ?>" alt="Build">
                         <?php else: ?>
@@ -339,6 +354,7 @@ renderHeader();
                 <p>No community builds found. Be the first to share one!</p>
             <?php endif; ?>
         </div>
+        <p id="noSearchResults" style="display:none; text-align:center; color:var(--text-secondary); margin-top:2rem;">No builds match your search.</p>
 
     <?php else: ?>
         <a href="/community.php" class="btn btn-secondary" style="margin-bottom: 1rem;">← Back to Community</a>
@@ -619,6 +635,41 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// --- Community Search & Sort ---
+function filterCommunity() {
+    const query = (document.getElementById('communitySearch')?.value || '').toLowerCase().trim();
+    const sort = document.getElementById('communitySort')?.value || 'likes';
+    const grid = document.getElementById('communityGrid');
+    const noResults = document.getElementById('noSearchResults');
+    if (!grid) return;
+
+    const cards = Array.from(grid.querySelectorAll('.build-card'));
+
+    // Filter
+    let visible = cards.filter(card => {
+        if (!query) return true;
+        const title = card.dataset.title || '';
+        const car = card.dataset.car || '';
+        const creator = card.dataset.creator || '';
+        return title.includes(query) || car.includes(query) || creator.includes(query);
+    });
+
+    cards.forEach(c => c.style.display = 'none');
+    visible.forEach(c => c.style.display = '');
+
+    // Sort
+    visible.sort((a, b) => {
+        if (sort === 'likes')      return parseFloat(b.dataset.likes) - parseFloat(a.dataset.likes);
+        if (sort === 'newest')     return parseFloat(b.dataset.date) - parseFloat(a.dataset.date);
+        if (sort === 'price_asc')  return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+        if (sort === 'price_desc') return parseFloat(b.dataset.price) - parseFloat(a.dataset.price);
+        return 0;
+    });
+    visible.forEach(c => grid.appendChild(c));
+
+    if (noResults) noResults.style.display = visible.length === 0 ? 'block' : 'none';
+}
 </script>
 
 <?php renderFooter(); ?>
