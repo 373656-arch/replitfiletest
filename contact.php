@@ -36,9 +36,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_contact'])) {
     }
 }
 
-$admins_result = $conn->query("SELECT email FROM admin_whitelist");
-renderHeader();
-?>
+    $admins_result = $conn->query("SELECT email FROM admin_whitelist");
+
+    // Safely grab the session variables (no database query needed!)
+    $current_user_name = $_SESSION['username'] ?? '';
+    $current_user_email = $_SESSION['email'] ?? '';
+
+    renderHeader();
+    ?>
 
 <div class="container">
     <div class="card" style="max-width: 640px; margin: 0 auto;">
@@ -66,12 +71,12 @@ renderHeader();
             <form method="POST">
                 <div class="form-group">
                     <label for="name">Your Name</label>
-                    <input type="text" id="name" name="name" required placeholder="John Doe" value="<?= htmlspecialchars($_SESSION['username'] ?? ''); ?>">
+                    <input type="text" id="name" name="name" required placeholder="John Doe" value="<?= htmlspecialchars($current_user_name); ?>">
                 </div>
 
                 <div class="form-group">
                     <label for="email">Your Email</label>
-                    <input type="email" id="email" name="email" required placeholder="you@example.com">
+                    <input type="email" id="email" name="email" required placeholder="you@example.com" value="<?= htmlspecialchars($current_user_email); ?>">
                 </div>
 
                 <div class="form-group">

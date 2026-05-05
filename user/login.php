@@ -16,7 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($password)) {
         $error = 'Please fill in all fields.';
     } else {
-        $stmt = $conn->prepare("SELECT uid, password_hash FROM users WHERE email = ?");
+        // 1. We added 'username' and 'email' to the SELECT query
+        $stmt = $conn->prepare("SELECT uid, username, email, password_hash FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -24,7 +25,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
             if (password_verify($password, $user['password_hash'])) {
+                // 2. We now save all three pieces of info to the session
                 $_SESSION['user_id'] = $user['uid'];
+                $_SESSION['username'] = $user['username'];
+                $_SESSION['email'] = $user['email'];
+
                 header('Location: /index.php');
                 exit;
             } else {
