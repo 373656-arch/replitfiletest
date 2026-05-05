@@ -1,6 +1,10 @@
 <?php
 require_once 'config.php';
-
+if (isset($_GET['clear_car'])) {
+    unset($_SESSION['selected_car_id']);
+    header('Location: /index.php');
+    exit;
+}
 // Handle "Edit" button from profile — load an existing build into prefill
 if (!empty($_GET['load_build']) && isLoggedIn()) {
     $load_id = (int)$_GET['load_build'];
@@ -252,7 +256,7 @@ renderHeader();
             <?php if ($selected_car): ?>
                 <div class="car-current-selection">
                     <span>Selected: <strong><?= $selected_car_name; ?></strong></span>
-                    <a href="/" class="car-clear-btn">✕ Change</a>
+                    <a href="?clear_car=1" class="car-clear-btn">✕ Change</a>
                 </div>
             <?php endif; ?>
             <div id="carResultsList" class="car-results-list" style="display:none;"></div>
@@ -450,41 +454,46 @@ function drag(event) {
 function allowDrop(event) { event.preventDefault(); event.currentTarget.classList.add('drag-over'); }
 function dragLeave(event) { event.currentTarget.classList.remove('drag-over'); }
 
-function drop(event) {
-    event.preventDefault();
-    event.currentTarget.classList.remove('drag-over');
+    function drop(event) {
+        event.preventDefault();
+        event.currentTarget.classList.remove('drag-over');
 
-    // Retrieve data using lowercase keys (dataset converts CamelCase to lowercase in getData if not careful, 
-    // but here we manually set them in drag(). Let's grab them safely.)
-    const d = {
-        id: event.dataTransfer.getData("partId"),
-        name: event.dataTransfer.getData("name"), // Note: dataset.name maps to data-name
-        price: parseFloat(event.dataTransfer.getData("price")),
-        link: event.dataTransfer.getData("link"),
-        category: event.dataTransfer.getData("category"),
-        engine: event.dataTransfer.getData("engine"),
-        chassis: event.dataTransfer.getData("chassis"),
-        yStart: parseInt(event.dataTransfer.getData("yearStart")),
-        yEnd: parseInt(event.dataTransfer.getData("yearEnd"))
-    };
+        const d = {
+            id: event.dataTransfer.getData("partId"),
+            name: event.dataTransfer.getData("name"),
+            price: parseFloat(event.dataTransfer.getData("price")),
+            link: event.dataTransfer.getData("link"),
+            category: event.dataTransfer.getData("category"),
+            engine: event.dataTransfer.getData("engine"),
+            chassis: event.dataTransfer.getData("chassis"),
+            yStart: parseInt(event.dataTransfer.getData("yearStart")),
+            yEnd: parseInt(event.dataTransfer.getData("yearEnd"))
+        };
 
-    // Check compatibility using the helper
-    const isCompatible = checkPartCompatibility(d.engine, d.chassis, d.yStart, d.yEnd);
+        // NEW: Check if a part from this category is already in the build
+        if (buildParts.some(p => p.category === d.category)) {
+            alert(`You already have a part from the ${d.category} category in your build. Please remove it first.`);
+            return; // Stop the drop execution
+        }
 
-    const slotMap = { 'Exhaust': 'exhaust', 'Intake': 'intake', 'Suspension': 'suspension', 'Wheels': 'wheels' };
+        // Check compatibility using the helper
+        const isCompatible = checkPartCompatibility(d.engine, d.chassis, d.yStart, d.yEnd);
 
-    buildParts.push({ 
-        part_id: d.id, 
-        name: d.name, 
-        price: d.price, 
-        link: d.link,
-        position: slotMap[d.category] || 'general',
-        isCompatible: isCompatible 
-    });
+        const slotMap = { 'Exhaust': 'exhaust', 'Intake': 'intake', 'Suspension': 'suspension', 'Wheels': 'wheels' };
 
-    updateBuildDisplay();
-    filterParts(); // Refresh list to hide added parts
-}
+        buildParts.push({ 
+            part_id: d.id, 
+            name: d.name, 
+            price: d.price, 
+            link: d.link,
+            position: slotMap[d.category] || 'general',
+            category: d.category, // NEW: Save the category so we can check it later
+            isCompatible: isCompatible 
+        });
+
+        updateBuildDisplay();
+        filterParts(); // Refresh list to hide added parts
+    }
 
 // --- Helper: Check Compatibility ---
     function checkPartCompatibility(pEngine, pChassis, pStart, pEnd) {
@@ -494,9 +503,10 @@ function drop(event) {
         const partEng = pEngine ? pEngine.trim().toLowerCase() : "";
         const partChas = pChassis ? pChassis.trim().toLowerCase() : "";
 
-        // 2. If the part has no codes assigned at all, it's incompatible by default
+        // 2. FIXED: If the part has no codes assigned at all, it's universally compatible 
+        // This allows Wheels, Tires, and universal accessories to show up for all cars.
         if (partEng === "" && partChas === "") {
-            return false;
+            return true; 
         }
 
         // 3. Ensure neither string is empty BEFORE checking if they match
@@ -740,30 +750,35 @@ function prepareBuildData() {
 }
 
 // --- Prefill Parts from Fork / Edit ---
-const PREFILL_PARTS = <?= $prefill_parts_json; ?>;
-if (PREFILL_PARTS && PREFILL_PARTS.length > 0) {
-    PREFILL_PARTS.forEach(prefillPart => {
-        // Try to look up full details (link, compatibility) from the rendered DOM
-        const domPart = document.querySelector(`.part-item[data-part-id="${prefillPart.part_id}"]`);
-        let link = prefillPart.link || '';
-        let isCompatible = true;
-        if (domPart) {
-            const d = domPart.dataset;
-            link = d.link || link;
-            isCompatible = checkPartCompatibility(d.engine, d.chassis, parseInt(d.yearStart), parseInt(d.yearEnd));
-        }
-        buildParts.push({
-            part_id: String(prefillPart.part_id),
-            name: prefillPart.name,
-            price: prefillPart.price,
-            link: link,
-            position: prefillPart.position || 'general',
-            isCompatible: isCompatible
+    // --- Prefill Parts from Fork / Edit ---
+    const PREFILL_PARTS = <?= $prefill_parts_json; ?>;
+    if (PREFILL_PARTS && PREFILL_PARTS.length > 0) {
+        PREFILL_PARTS.forEach(prefillPart => {
+            const domPart = document.querySelector(`.part-item[data-part-id="${prefillPart.part_id}"]`);
+            let link = prefillPart.link || '';
+            let category = 'general'; // Default fallback
+            let isCompatible = true;
+
+            if (domPart) {
+                const d = domPart.dataset;
+                link = d.link || link;
+                category = d.category || category; // Grab category from DOM
+                isCompatible = checkPartCompatibility(d.engine, d.chassis, parseInt(d.yearStart), parseInt(d.yearEnd));
+            }
+
+            buildParts.push({
+                part_id: String(prefillPart.part_id),
+                name: prefillPart.name,
+                price: prefillPart.price,
+                link: link,
+                position: prefillPart.position || 'general',
+                category: category, // Save category during prefill
+                isCompatible: isCompatible
+            });
         });
-    });
-    updateBuildDisplay();
-    filterParts();
-}
+        updateBuildDisplay();
+        filterParts();
+    }
 
 // --- Page Init ---
 <?php if ($selected_car): ?>
