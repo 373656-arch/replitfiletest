@@ -32,12 +32,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         $answer_id = (int)$_POST['answer_id'];
-        if (!isset($_SESSION['upvoted_answers'])) $_SESSION['upvoted_answers'] = [];
-        if (!in_array($answer_id, $_SESSION['upvoted_answers'])) {
-            $conn->query("UPDATE qa_answers SET upvotes = upvotes + 1 WHERE id = $answer_id");
-            $_SESSION['upvoted_answers'][] = $answer_id;
-            $res = $conn->query("SELECT upvotes FROM qa_answers WHERE id = $answer_id");
-            $new_count = $res->fetch_assoc()['upvotes'];
+        $user_id = (int)$_SESSION['user_id'];
+
+        // Check database instead of temporary session
+        $check_stmt = $conn->prepare("SELECT id FROM qa_upvotes WHERE user_id = ? AND answer_id = ?");
+        $check_stmt->bind_param("ii", $user_id, $answer_id);
+        $check_stmt->execute();
+
+        if ($check_stmt->get_result()->num_rows === 0) {
+            // Save the vote permanently
+            $ins_stmt = $conn->prepare("INSERT INTO qa_upvotes (user_id, answer_id) VALUES (?, ?)");
+            $ins_stmt->bind_param("ii", $user_id, $answer_id);
+            $ins_stmt->execute();
+
+            // Update the answer count securely using prepared statements
+            $upd_stmt = $conn->prepare("UPDATE qa_answers SET upvotes = upvotes + 1 WHERE id = ?");
+            $upd_stmt->bind_param("i", $answer_id);
+            $upd_stmt->execute();
+
+            $res_stmt = $conn->prepare("SELECT upvotes FROM qa_answers WHERE id = ?");
+            $res_stmt->bind_param("i", $answer_id);
+            $res_stmt->execute();
+            $new_count = $res_stmt->get_result()->fetch_assoc()['upvotes'];
+
             echo json_encode(['success' => true, 'new_count' => $new_count]);
         } else {
             echo json_encode(['success' => false, 'error' => 'Already voted!']);
@@ -98,7 +115,16 @@ $questions_query = "
     JOIN users u ON q.user_id = u.uid
     ORDER BY q.date_posted DESC LIMIT 50";
 $community_questions = $conn->query($questions_query);
-
+$user_upvotes = [];
+if (isLoggedIn()) {
+    $uv_stmt = $conn->prepare("SELECT answer_id FROM qa_upvotes WHERE user_id = ?");
+    $uv_stmt->bind_param("i", $_SESSION['user_id']);
+    $uv_stmt->execute();
+    $uv_res = $uv_stmt->get_result();
+    while ($row = $uv_res->fetch_assoc()) {
+        $user_upvotes[] = $row['answer_id'];
+    }
+}
 $pageTitle = "FAQ & Q&A - ModMyCar";
 $pageDescription = "Get answers from the ModMyCar community. Ask questions, share tips, and learn from fellow car enthusiasts.";
 require_once 'includes/headerFooter.php';
@@ -315,7 +341,13 @@ details p {
                             ?>
                                 <div class="answer-block">
                                     <div class="upvote-col">
-                                        <button class="upvote-btn" onclick="upvoteAnswer(<?php echo $ans['id']; ?>, this)" title="Upvote">▲</button>
+                                        <?php $has_voted = in_array($ans['id'], $user_upvotes); ?>
+                                        <button class="upvote-btn" 
+                                                onclick="upvoteAnswer(<?php echo $ans['id']; ?>, this)" 
+                                                title="<?php echo $has_voted ? 'Already upvoted' : 'Upvote'; ?>"
+                                                <?php echo $has_voted ? 'disabled style="color: var(--text-secondary);"' : ''; ?>>
+                                            ▲
+                                        </button>
                                         <span class="upvote-count"><?php echo (int)$ans['upvotes']; ?></span>
                                     </div>
                                     <div style="flex: 1;">
