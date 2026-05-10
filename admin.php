@@ -61,6 +61,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // --- MESSAGE REPLY HANDLING ---
+    if (isset($_POST['reply_message'])) {
+        $msg_id = (int)$_POST['message_id'];
+        $sender_email = $_POST['sender_email'];
+        $reply_preset = $_POST['reply_preset'];
+        $custom_reply = trim($_POST['custom_reply'] ?? '');
+
+        // Determine final message content
+        $final_reply = ($reply_preset === 'other') ? $custom_reply : $reply_preset;
+
+        if (!empty($final_reply)) {
+            // Simulated Email Sending: 
+            // In a real production environment, you would use mail() or PHPMailer here.
+            // mail($sender_email, "Reply from ModMyCar Admin", $final_reply);
+
+            // For now, we will just show a success message simulating the email dispatch
+            $success = "Reply successfully sent to " . htmlspecialchars($sender_email) . "!";
+        } else {
+            $error = "Reply message cannot be empty.";
+        }
+    }
+
     // --- CAR MANAGEMENT (Updated) ---
     if (isset($_POST['add_car'])) {
 
@@ -148,20 +170,58 @@ renderHeader();
 ?>
 
 <style>
-    /* Admin Specific Styling */
+    /* Admin Specific Styling - Black/Gold Theme */
+    body { background-color: #0a0a0a; color: #f0f0f0; } 
     .admin-container { display: flex; gap: 30px; margin-top: 20px; color: #fff; }
-    .admin-sidebar { width: 250px; background: #1a1a2e; padding: 20px; border-radius: 8px; height: fit-content; }
-    .admin-sidebar h3 { margin-bottom: 20px; color: #00d4ff; border-bottom: 1px solid #333; padding-bottom: 10px; }
-    .admin-nav { display: flex; flex-direction: column; gap: 10px; }
-    .admin-nav a { color: #ccc; text-decoration: none; padding: 10px; border-radius: 4px; transition: 0.3s; }
-    .admin-nav a:hover, .admin-nav a.active { background: #00d4ff; color: #000; }
 
-    .admin-main { flex: 1; background: #1a1a2e; padding: 30px; border-radius: 8px; }
-    .card { background: #16213e; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    /* Navigation Sidebar */
+    .admin-sidebar { 
+        width: 250px; 
+        background: #0a0a0a; 
+        padding: 24px 16px; 
+        border-radius: 8px; 
+        height: fit-content; 
+        border: 1px solid #222;
+    }
+    .admin-sidebar h3 { 
+        margin-top: 0;
+        margin-bottom: 24px; 
+        color: #ce934b; /* Gold */
+        border-bottom: 1px solid #222; 
+        padding-bottom: 12px; 
+        padding-left: 8px; 
+        font-weight: bold; 
+        font-size: 1.1rem; 
+    }
+    .admin-nav { display: flex; flex-direction: column; gap: 8px; }
+    .admin-nav a { 
+        color: #aaa; 
+        text-decoration: none; 
+        padding: 12px 16px; 
+        border-radius: 4px; 
+        transition: all 0.2s ease; 
+        font-weight: 500; 
+        font-size: 0.95rem; 
+    }
+    .admin-nav a:hover { 
+        background: #1e1e1e; 
+        color: #ce934b; 
+    }
+    .admin-nav a.active { 
+        background: #ce934b; /* Gold active state */
+        color: #0a0a0a; 
+        font-weight: bold;
+    }
 
+    /* Main Area & Cards */
+    .admin-main { flex: 1; background: #0a0a0a; padding: 30px; border-radius: 8px; }
+    .card { background: #141414; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #222; }
+
+    /* Forms */
     .form-group { margin-bottom: 15px; }
     .form-group label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.9rem; }
-    input, select, textarea { width: 100%; padding: 12px; background: #0f3460; border: 1px solid #1a1a2e; color: #fff; border-radius: 4px; }
+    input, select, textarea { width: 100%; padding: 12px; background: #1e1e1e; border: 1px solid #333; color: #fff; border-radius: 4px; }
+    input:focus, select:focus, textarea:focus { border-color: #ce934b; outline: none; }
 
     /* Layout for Car Management */
     .car-split-view { display: flex; gap: 25px; }
@@ -169,41 +229,42 @@ renderHeader();
     /* LEFT SIDE: INSTRUCTIONS */
     .car-instructions { 
         flex: 1; 
-        background: #0f3460; 
+        background: #1e1e1e; 
         padding: 20px; 
         border-radius: 8px; 
-        border-left: 3px solid #00d4ff; 
+        border-left: 3px solid #ce934b; 
         height: fit-content;
     }
-    .car-instructions h4 { color: #00d4ff; margin-top: 0; margin-bottom: 15px; }
+    .car-instructions h4 { color: #ce934b; margin-top: 0; margin-bottom: 15px; }
     .car-instructions p { font-size: 0.9rem; color: #ccc; line-height: 1.6; margin-bottom: 10px; }
     .car-instructions strong { color: #fff; }
 
     /* RIGHT SIDE: FORM INPUTS */
     .car-form-area { flex: 2; }
 
-    /* Smart Rules Box Styling (reused) */
-    .smart-rules-box { background: #0f3460; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px dashed #00d4ff; }
-    .smart-rules-box h5 { color: #00d4ff; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+    /* Smart Rules Box Styling */
+    .smart-rules-box { background: #1e1e1e; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px dashed #ce934b; }
+    .smart-rules-box h5 { color: #ce934b; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
 
-    .btn { background: #00d4ff; color: #000; border: none; padding: 12px 25px; font-weight: bold; cursor: pointer; border-radius: 4px; width: 100%; }
-    .btn:hover { background: #008fb3; }
+    /* Buttons */
+    .btn { background: #ce934b; color: #0a0a0a; border: none; padding: 12px 25px; font-weight: bold; cursor: pointer; border-radius: 4px; width: 100%; transition: background 0.2s; }
+    .btn:hover { background: #b57e3c; }
 
-    .compat-list { background: #0f3460; max-height: 200px; overflow-y: auto; padding: 10px; border-radius: 4px; }
+    .compat-list { background: #1e1e1e; max-height: 200px; overflow-y: auto; padding: 10px; border-radius: 4px; border: 1px solid #333; }
     .compat-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; }
 
     /* Message Cards */
-    .message-card { background: #0f3460; padding: 20px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #00d4ff; }
-    .message-header { display: flex; justify-content: space-between; border-bottom: 1px solid #1a1a2e; padding-bottom: 10px; margin-bottom: 15px; }
+    .message-card { background: #1e1e1e; padding: 20px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ce934b; border-right: 1px solid #222; border-top: 1px solid #222; border-bottom: 1px solid #222; }
+    .message-header { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
     .btn-danger { background: #dc3545; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
     .btn-danger:hover { background: #c82333; }
     .message-card.highlight-msg { 
-        border-left: 4px solid #22c55e; 
-        background: #133a54; 
+        border-left: 4px solid #ce934b; 
+        background: #231b11; /* Slight gold tint for highlighted message */
     }
     .badge-yours {
-        background: #22c55e;
-        color: #000;
+        background: #ce934b;
+        color: #0a0a0a;
         padding: 2px 8px;
         border-radius: 12px;
         font-size: 0.75rem;
@@ -212,26 +273,37 @@ renderHeader();
         vertical-align: middle;
     }
 
+    /* Message Expand/Shrink Functionality */
+    .msg-body-wrapper { position: relative; }
+    .msg-body-text { color: #ccc; line-height: 1.6; margin: 0; transition: max-height 0.3s ease; }
+    .msg-body-text.collapsed {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .toggle-msg-btn {
+        background: none; border: none; color: #ce934b; padding: 5px 0 0 0;
+        cursor: pointer; font-size: 0.85rem; font-weight: bold; text-decoration: underline;
+    }
+    .toggle-msg-btn:hover { color: #b57e3c; }
+
     /* Background Refresh Spinner CSS */
     .refresh-spinner {
         display: inline-block;
         width: 18px;
         height: 18px;
-        border: 3px solid rgba(0, 212, 255, 0.2);
+        border: 3px solid rgba(206, 147, 75, 0.2);
         border-radius: 50%;
-        border-top-color: #00d4ff;
+        border-top-color: #ce934b;
         animation: spin 1s ease-in-out infinite;
         vertical-align: middle;
         margin-left: 12px;
         opacity: 0;
         transition: opacity 0.3s ease;
     }
-    .refresh-spinner.active {
-        opacity: 1;
-    }
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
+    .refresh-spinner.active { opacity: 1; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 
 <div class="container admin-container">
@@ -279,25 +351,25 @@ renderHeader();
                 ?>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
-                    <div class="card" style="background: #0f3460; text-align: center;">
-                        <h4 style="color: #00d4ff;">Total Clicks</h4>
+                    <div class="card" style="background: #1e1e1e; text-align: center;">
+                        <h4 style="color: #ce934b;">Total Clicks</h4>
                         <p style="font-size: 2rem; margin: 10px 0;"><?= $click_count ?></p>
                     </div>
-                    <div class="card" style="background: #0f3460; text-align: center;">
-                        <h4 style="color: #00d4ff;">Conversions</h4>
+                    <div class="card" style="background: #1e1e1e; text-align: center;">
+                        <h4 style="color: #ce934b;">Conversions</h4>
                         <p style="font-size: 2rem; margin: 10px 0;"><?= $conv_count ?></p>
                     </div>
-                    <div class="card" style="background: #0f3460; text-align: center;">
-                        <h4 style="color: #00d4ff;">Revenue</h4>
+                    <div class="card" style="background: #1e1e1e; text-align: center;">
+                        <h4 style="color: #ce934b;">Revenue</h4>
                         <p style="font-size: 2rem; margin: 10px 0;">$<?= number_format($total_revenue, 2) ?></p>
                     </div>
-                    <div class="card" style="background: #0f3460; text-align: center;">
-                        <h4 style="color: #00d4ff;">Conv. Rate</h4>
+                    <div class="card" style="background: #1e1e1e; text-align: center;">
+                        <h4 style="color: #ce934b;">Conv. Rate</h4>
                         <p style="font-size: 2rem; margin: 10px 0;"><?= number_format($conv_rate, 1) ?>%</p>
                     </div>
                 </div>
 
-                <div class="card" style="background: #0f3460;">
+                <div class="card" style="background: #1e1e1e;">
                     <h3>Revenue Over Time (Last 30 Days)</h3>
                     <canvas id="revenueChart" style="max-height: 400px;"></canvas>
                 </div>
@@ -311,8 +383,8 @@ renderHeader();
                             datasets: [{
                                 label: 'Commission Revenue ($)',
                                 data: <?= $values ?>,
-                                borderColor: '#00d4ff',
-                                backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                                borderColor: '#ce934b', /* Updated to gold */
+                                backgroundColor: 'rgba(206, 147, 75, 0.1)', /* Updated to gold */
                                 fill: true,
                                 tension: 0.4
                             }]
@@ -337,7 +409,7 @@ renderHeader();
                     Database Visualization 
                     <div id="loading-spinner" class="refresh-spinner"></div>
                 </h2>
-                <p style="color: #22c55e; font-size: 0.85rem; margin-top: -10px; margin-bottom: 20px;">
+                <p style="color: #ce934b; font-size: 0.85rem; margin-top: -10px; margin-bottom: 20px;">
                     ● Live Updating smoothly in background (10s)
                 </p>
 
@@ -354,15 +426,15 @@ renderHeader();
 
                 <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px;">
                     <?php foreach($counts as $table => $count): ?>
-                        <div style="background: #0f3460; border-left: 4px solid #00d4ff; padding: 20px; border-radius: 8px; flex: 1 1 calc(25% - 15px); min-width: 150px;">
+                        <div style="background: #1e1e1e; border-left: 4px solid #ce934b; padding: 20px; border-radius: 8px; flex: 1 1 calc(25% - 15px); min-width: 150px;">
                             <h4 style="margin: 0; color: #aaa; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;"><?= htmlspecialchars($table) ?></h4>
                             <p id="count-<?= htmlspecialchars($table) ?>" style="font-size: 2rem; margin: 10px 0 0 0; color: #fff; font-weight: bold; transition: color 0.3s;"><?= $count ?></p>
                         </div>
                     <?php endforeach; ?>
                 </div>
 
-                <div style="background: #132a4a; padding: 20px; border-radius: 8px; border: 1px solid #1a1a2e;">
-                    <h3 style="color: #00d4ff; margin-top: 0;">Entity Relationships</h3>
+                <div style="background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333;">
+                    <h3 style="color: #ce934b; margin-top: 0;">Entity Relationships</h3>
                     <ul style="color: #ccc; line-height: 2; list-style-type: none; padding: 0;">
                         <li>🔑 <strong>users</strong> ➔ <em>Links to:</em> user_saved_builds, click_logs</li>
                         <li>🔑 <strong>cars</strong> ➔ <em>Links to:</em> user_saved_builds, part_compatibility</li>
@@ -387,9 +459,9 @@ renderHeader();
                             for (const [table, count] of Object.entries(data)) {
                                 const countElement = document.getElementById('count-' + table);
                                 if (countElement) {
-                                    // Make the text flash green slightly if the number changed
+                                    // Make the text flash gold slightly if the number changed
                                     if (countElement.innerText !== String(count)) {
-                                        countElement.style.color = '#22c55e';
+                                        countElement.style.color = '#ce934b';
                                         setTimeout(() => countElement.style.color = '#fff', 1000);
                                     }
                                     countElement.innerText = count;
@@ -432,7 +504,7 @@ renderHeader();
                                 <div>
                                     <h4 style="margin: 0; color: #fff;">From: <?= htmlspecialchars($msg['sender_name']) ?> <span style="font-weight: normal; color: #aaa;">(<?= htmlspecialchars($msg['sender_email']) ?>)</span></h4>
 
-                                    <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #00d4ff;">
+                                    <p style="margin: 5px 0 0 0; font-size: 0.9rem; color: #ce934b;">
                                         <strong>Addressed to:</strong> <?= htmlspecialchars($msg['target_admin_email']) ?>
 
                                         <?php if ($isForMe): ?>
@@ -448,17 +520,84 @@ renderHeader();
                                     </form>
                                 </div>
                             </div>
-                            <p style="color: #ccc; line-height: 1.6; margin: 0;">
-                                <?= nl2br(htmlspecialchars($msg['message'])) ?>
-                            </p>
+
+                            <div class="msg-body-wrapper">
+                                <p class="msg-body-text collapsed" id="msg-text-<?= $msg['message_id'] ?>">
+                                    <?= nl2br(htmlspecialchars($msg['message'])) ?>
+                                </p>
+                                <button type="button" class="toggle-msg-btn" id="toggle-btn-<?= $msg['message_id'] ?>" onclick="toggleMessage(<?= $msg['message_id'] ?>)" style="display:none;">Expand</button>
+                            </div>
+
+                            <hr style="border-top: 1px dashed #333; margin: 20px 0;">
+
+                            <form method="POST" class="reply-form">
+                                <input type="hidden" name="message_id" value="<?= $msg['message_id'] ?>">
+                                <input type="hidden" name="sender_email" value="<?= htmlspecialchars($msg['sender_email']) ?>">
+
+                                <div class="form-group" style="margin-bottom: 10px;">
+                                    <label style="color: #ce934b;">Reply to User</label>
+                                    <select name="reply_preset" required onchange="toggleCustomReply(this, <?= $msg['message_id'] ?>)" style="padding: 8px;">
+                                        <option value="">-- Select a preset reply --</option>
+                                        <option value="Thank you for reaching out! We are currently looking into your request.">We are looking into this.</option>
+                                        <option value="Your request has been successfully processed by our admin team.">Request Processed.</option>
+                                        <option value="Could you please provide more information regarding your submission?">Need more info.</option>
+                                        <option value="other">Other (Type Custom Message)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" id="custom-reply-<?= $msg['message_id'] ?>" style="display: none; margin-bottom: 10px;">
+                                    <textarea name="custom_reply" placeholder="Type your custom message here..." rows="3" style="padding: 8px;"></textarea>
+                                </div>
+
+                                <button type="submit" name="reply_message" class="btn" style="width: auto; padding: 8px 15px; font-size: 0.85rem;">Send Reply</button>
+                            </form>
                         </div>
                         <?php
                     }
                 } else {
-                    echo "<div style='background: #0f3460; padding: 20px; border-radius: 8px; text-align: center; color: #aaa;'>Your inbox is empty. No messages yet!</div>";
+                    echo "<div style='background: #1e1e1e; padding: 20px; border-radius: 8px; text-align: center; color: #aaa;'>Your inbox is empty. No messages yet!</div>";
                 }
                 ?>
             </div>
+
+            <script>
+                // Hide Expand button if message isn't long enough to overflow
+                document.addEventListener("DOMContentLoaded", function() {
+                    const messages = document.querySelectorAll('.msg-body-text');
+                    messages.forEach(msg => {
+                        const id = msg.id.split('-')[2];
+                        const btn = document.getElementById('toggle-btn-' + id);
+                        if (msg.scrollHeight > msg.clientHeight) {
+                            btn.style.display = 'inline-block';
+                        }
+                    });
+                });
+
+                function toggleMessage(id) {
+                    const text = document.getElementById('msg-text-' + id);
+                    const btn = document.getElementById('toggle-btn-' + id);
+                    if (text.classList.contains('collapsed')) {
+                        text.classList.remove('collapsed');
+                        btn.innerText = 'Shrink';
+                    } else {
+                        text.classList.add('collapsed');
+                        btn.innerText = 'Expand';
+                    }
+                }
+
+                function toggleCustomReply(selectObj, id) {
+                    const customBox = document.getElementById('custom-reply-' + id);
+                    const textarea = customBox.querySelector('textarea');
+                    if (selectObj.value === 'other') {
+                        customBox.style.display = 'block';
+                        textarea.required = true;
+                    } else {
+                        customBox.style.display = 'none';
+                        textarea.required = false;
+                        textarea.value = ''; // clear when hidden
+                    }
+                }
+            </script>
 
         <?php elseif ($section === 'cars'): ?>
 
@@ -469,7 +608,7 @@ renderHeader();
                     <div class="car-instructions">
                         <h4>Instructions</h4>
                         <p><strong>Step 1:</strong> Type the full car name in the top box using the format: <br><em>"Year Brand Model"</em>.</p>
-                        <p><strong>Example:</strong> <br><span style="color:#00d4ff">2021 BMW M340i</span></p>
+                        <p><strong>Example:</strong> <br><span style="color:#ce934b">2021 BMW M340i</span></p>
                         <p>The system will try to auto-fill the Year, Brand, and Model boxes below.</p>
                         <p><strong>Step 2:</strong> Verify the auto-filled data. You can edit the boxes if they are incorrect.</p>
                         <p><strong>Step 3:</strong> Manually enter the Chassis Code, Engine Code, and Trim Level.</p>
@@ -481,7 +620,7 @@ renderHeader();
                         <form method="POST" enctype="multipart/form-data">
 
                             <div class="form-group">
-                                <label style="color: #00d4ff; font-weight: bold;">New Car Model Here</label>
+                                <label style="color: #ce934b; font-weight: bold;">New Car Model Here</label>
                                 <input 
                                     type="text" 
                                     id="mainInput" 
