@@ -5,10 +5,10 @@ error_reporting(E_ALL);
 
 session_start();
 
-define('DB_HOST', getenv('DB_HOST') ?: 'srv941.hstgr.io');
-define('DB_USER', getenv('DB_USER') ?: '');
-define('DB_PASS', getenv('DB_PASS') ?: '');
-define('DB_NAME', getenv('DB_NAME') ?: '');
+define('DB_HOST', getenv('DB_HOST'));
+define('DB_USER', getenv('DB_USER'));
+define('DB_PASS', getenv('DB_PASS'));
+define('DB_NAME', getenv('DB_NAME'));
 
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
