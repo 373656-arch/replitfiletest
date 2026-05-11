@@ -78,6 +78,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // For now, we will just show a success message simulating the email dispatch
             $success = "Reply successfully sent to " . htmlspecialchars($sender_email) . "!";
+
+            // --- NOTIFICATION: ADMIN REPLY ---
+            // Look up the user ID associated with this email
+            $user_lookup = $conn->prepare("SELECT uid FROM users WHERE email = ?");
+            $user_lookup->bind_param("s", $sender_email);
+            $user_lookup->execute();
+            $user_result = $user_lookup->get_result()->fetch_assoc();
+
+            if ($user_result) {
+                createNotification($user_result['uid'], 'admin_reply', "An admin replied to your contact message.", "/contact.php", $_SESSION['user_id']);
+            }
         } else {
             $error = "Reply message cannot be empty.";
         }

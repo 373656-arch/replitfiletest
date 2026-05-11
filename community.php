@@ -64,6 +64,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $upd->bind_param("i", $build_id);
             $upd->execute();
             $new_status = 'Unlike';
+
+            // --- NOTIFICATION: LIKE ---
+            $owner_stmt = $conn->prepare("SELECT user_id FROM builds WHERE build_id = ?");
+            $owner_stmt->bind_param("i", $build_id);
+            $owner_stmt->execute();
+            $owner_id = $owner_stmt->get_result()->fetch_assoc()['user_id'];
+
+            if ($owner_id != $_SESSION['user_id']) {
+                $u_data = getUserData($_SESSION['user_id']);
+                createNotification($owner_id, 'like', $u_data['username'] . " liked your build!", "/community.php?build=" . $build_id, $_SESSION['user_id']);
+            }
         }
 
         if ($is_ajax) {
@@ -89,6 +100,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare("INSERT INTO user_saved_builds (user_id, build_id) VALUES (?, ?)");
             $stmt->bind_param("ii", $_SESSION['user_id'], $build_id);
             $stmt->execute();
+
+            // --- NOTIFICATION: SAVE ---
+            $owner_stmt = $conn->prepare("SELECT user_id FROM builds WHERE build_id = ?");
+            $owner_stmt->bind_param("i", $build_id);
+            $owner_stmt->execute();
+            $owner_id = $owner_stmt->get_result()->fetch_assoc()['user_id'];
+
+            if ($owner_id != $_SESSION['user_id']) {
+                $u_data = getUserData($_SESSION['user_id']);
+                createNotification($owner_id, 'save', $u_data['username'] . " saved your build!", "/community.php?build=" . $build_id, $_SESSION['user_id']);
+            }
         }
 
         if ($is_ajax) {
@@ -118,6 +140,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute();
             $new_comment_id = $conn->insert_id;
 
+            // --- NOTIFICATION: COMMENT / REPLY ---
+            $u_data = getUserData($_SESSION['user_id']);
+            if ($parent_id === null) {
+                // It's a top-level comment, notify the build owner
+                $owner_stmt = $conn->prepare("SELECT user_id FROM builds WHERE build_id = ?");
+                $owner_stmt->bind_param("i", $build_id);
+                $owner_stmt->execute();
+                $owner_id = $owner_stmt->get_result()->fetch_assoc()['user_id'];
+
+                if ($owner_id != $_SESSION['user_id']) {
+                    createNotification($owner_id, 'comment', $u_data['username'] . " commented on your build.", "/community.php?build=" . $build_id, $_SESSION['user_id']);
+                }
+            } else {
+                // It's a reply, notify the parent comment owner
+                $parent_stmt = $conn->prepare("SELECT user_id FROM comments WHERE comment_id = ?");
+                $parent_stmt->bind_param("i", $parent_id);
+                $parent_stmt->execute();
+                $parent_owner_id = $parent_stmt->get_result()->fetch_assoc()['user_id'];
+
+                if ($parent_owner_id != $_SESSION['user_id']) {
+                    createNotification($parent_owner_id, 'reply', $u_data['username'] . " replied to your comment.", "/community.php?build=" . $build_id, $_SESSION['user_id']);
+                }
+            }
+
             if ($is_ajax) {
                 // Fetch user info to render the HTML
                 $user = getUserData($_SESSION['user_id']);
@@ -136,7 +182,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php if (!$is_reply): ?>
                         <button onclick="showReplyForm(<?php echo $new_comment_id; ?>)" class="btn btn-secondary" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.9rem;">Reply</button>
                     <?php endif; ?>
-
                     <form method="POST" class="ajax-form" style="display: inline;">
                         <input type="hidden" name="ajax" value="1">
                         <input type="hidden" name="action" value="delete_comment">
@@ -144,34 +189,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="hidden" name="build_id" value="<?php echo $build_id; ?>">
                         <button type="submit" class="btn" style="background: #ef4444; padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="return confirm('Delete this?')">Delete</button>
                     </form>
-
                     <?php if (!$is_reply): ?>
-                        <div id="reply-form-<?php echo $new_comment_id; ?>" style="display: none; margin-top: 1rem;">
-                            <form method="POST" class="ajax-form">
-                                <input type="hidden" name="ajax" value="1">
-                                <input type="hidden" name="action" value="add_comment">
-                                <input type="hidden" name="build_id" value="<?php echo $build_id; ?>">
-                                <input type="hidden" name="parent_id" value="<?php echo $new_comment_id; ?>">
-                                <textarea name="content" placeholder="Write a reply..." required></textarea>
-                                <button type="submit" class="btn">Post Reply</button>
-                            </form>
-                        </div>
-                        <div id="replies-container-<?php echo $new_comment_id; ?>" class="replies-container" style="display: block;"></div>
+                    <div id="reply-form-<?php echo $new_comment_id; ?>" style="display: none; margin-top: 1rem;">
+                        <form method="POST" class="ajax-form">
+                            <input type="hidden" name="ajax" value="1">
+                            <input type="hidden" name="action" value="add_comment">
+                            <input type="hidden" name="build_id" value="<?php echo $build_id; ?>">
+                            <input type="hidden" name="parent_id" value="<?php echo $new_comment_id; ?>">
+                            <textarea name="content" required placeholder="Write a reply..." style="width: 100%; margin-bottom: 0.5rem; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px; padding: 0.5rem; resize: vertical; min-height: 60px;"></textarea>
+                            <button type="submit" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Post Reply</button>
+                        </form>
+                    </div>
                     <?php endif; ?>
                 </div>
                 <?php
                 $html = ob_get_clean();
-                echo json_encode(['success' => true, 'action' => 'add_comment', 'html' => $html, 'parent_id' => $parent_id]);
+                echo json_encode(['success' => true, 'action' => 'add_comment', 'html' => $html]);
                 exit;
             }
-        }
-
-        if (!$is_ajax) {
             header("Location: community.php?build=" . $build_id);
             exit;
         }
     }
-
+}
     // -------------------------
     // Delete comment
     // -------------------------
@@ -247,7 +287,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: /index.php");
         exit;
     }
-}
+
 
 // -------------------------
 // Filters and community list [Unchanged]
