@@ -650,7 +650,7 @@ function fetchStockHP() {
     spinner.style.display = 'inline';
     stockEl.textContent = '—';
 
-    fetch('/api/stock_hp.php', {
+    fetch('/stock_hp.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ car_id: carData.id })
@@ -703,13 +703,13 @@ function fetchEstimatedHP() {
 
     clearTimeout(hpDebounceTimer);
     hpDebounceTimer = setTimeout(() => {
-        fetch('/api/estimate_hp.php', {
+        fetch('/estimate_hp.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 car: carName,
                 stock_hp: stockHpValue,
-                parts: compatibleParts.map(p => ({ name: p.name }))
+                parts: compatibleParts.map(p => ({ id: p.part_id, name: p.name }))
             })
         })
         .then(r => r.json())
