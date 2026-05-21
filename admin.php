@@ -87,7 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user_result = $user_lookup->get_result()->fetch_assoc();
 
             if ($user_result) {
-                createNotification($user_result['uid'], 'admin_reply', "An admin replied to your contact message.", "/contact.php", $_SESSION['user_id']);
+                $notif_msg = "Admin reply: " . $final_reply;
+                createNotification($user_result['uid'], 'admin_reply', $notif_msg, null, $_SESSION['user_id']);
             }
         } else {
             $error = "Reply message cannot be empty.";

@@ -4,7 +4,7 @@ ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
 
 session_start();
-
+date_default_timezone_set('America/Los_Angeles');
 define('DB_HOST', getenv('DB_HOST'));
 define('DB_USER', getenv('DB_USER'));
 define('DB_PASS', getenv('DB_PASS'));
@@ -25,6 +25,16 @@ if (isset($_POST['ajax_mark_notifications_read']) && isset($_SESSION['user_id'])
     $stmt->execute();
     exit; // Stop executing the rest of the file since this is a background request
 }
+
+// ---> ADD THIS NEW BLOCK HERE <---
+// --- AJAX LISTENER: Clear all notifications ---
+if (isset($_POST['ajax_clear_all_notifications']) && isset($_SESSION['user_id'])) {
+    $stmt = $conn->prepare("DELETE FROM notifications WHERE user_id = ?");
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    exit;
+}
+// ---------------------------------
 
 function isLoggedIn() {
     return isset($_SESSION['user_id']);

@@ -15,7 +15,7 @@ if (isLoggedIn()) {
     if ($currentUser) {
         $isUserAdmin = isAdmin($currentUser['email']);
         $unread_notifications = getUnreadNotificationCount($_SESSION['user_id']);
-        $recent_notifications = getRecentNotifications($_SESSION['user_id'], 5); // Fetch top 5 recent
+        $recent_notifications = getRecentNotifications($_SESSION['user_id'], 10);
     }
 }
 function renderHeader() {
@@ -126,13 +126,33 @@ function renderHeader() {
             }
 
             .notif-header { 
-                padding: 18px 20px !important; 
-                font-size: 16px !important; 
+                padding: 14px 18px !important; 
+                font-size: 15px !important; 
                 font-weight: 700 !important; 
                 border-bottom: 1px solid rgba(255,255,255,0.1) !important; 
                 letter-spacing: 0.5px !important;
                 color: #fff !important;
-                text-align: left !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+            }
+
+            .notif-clear-btn {
+                background: transparent !important;
+                border: 1px solid rgba(255,255,255,0.2) !important;
+                color: #aaa !important;
+                font-size: 11px !important;
+                font-weight: 600 !important;
+                padding: 3px 10px !important;
+                border-radius: 20px !important;
+                cursor: pointer !important;
+                transition: all 0.2s !important;
+                letter-spacing: 0.3px !important;
+            }
+            .notif-clear-btn:hover {
+                background: rgba(239,68,68,0.15) !important;
+                border-color: #ef4444 !important;
+                color: #ef4444 !important;
             }
 
             .notif-body { 
@@ -143,57 +163,95 @@ function renderHeader() {
 
             .notif-item {
                 display: block !important; 
-                height: auto !important; /* Forces container to expand with wrapped text */
-                min-height: 64px !important; /* Keeps a nice baseline size */
-                padding: 16px 45px 16px 20px !important; 
+                height: auto !important;
+                min-height: 56px !important;
+                padding: 14px 16px !important; 
                 border-radius: 12px !important;
-                text-decoration: none !important; 
                 color: #fff !important; 
                 position: relative !important;
                 transition: all 0.2s ease !important; 
                 margin-bottom: 6px !important;
                 text-align: left !important;
-                clear: both !important; /* Ensures the whole block clears any floats */
+                cursor: default !important;
             }
 
             .notif-item:hover { 
-                background: rgba(255,255,255,0.08) !important; 
+                background: rgba(255,255,255,0.06) !important; 
             }
 
             .notif-item.unread { 
-                background: rgba(200, 136, 58, 0.15) !important; 
-            }
-            .notif-item.unread::after {
-                content: '' !important; 
-                position: absolute !important; 
-                top: 50% !important; 
-                right: 18px !important; 
-                transform: translateY(-50%) !important;
-                width: 12px !important; 
-                height: 12px !important; 
-                background: var(--accent-1, #c8883a) !important; 
-                border-radius: 50% !important;
-                box-shadow: 0 0 10px var(--accent-1, #c8883a) !important;
+                background: rgba(200, 136, 58, 0.12) !important;
+                border-left: 3px solid var(--accent-1, #c8883a) !important;
             }
 
             .notif-msg { 
                 display: block !important;
-                float: none !important; /* Overrides rogue floats causing indentation */
-                font-size: 14px !important; 
-                line-height: 1.6 !important; 
-                margin: 0 0 8px 0 !important; 
+                font-size: 13.5px !important; 
+                line-height: 1.55 !important; 
+                margin: 0 0 6px 0 !important; 
                 white-space: normal !important; 
                 word-wrap: break-word !important; 
                 overflow-wrap: anywhere !important; 
-                color: #eaeaea !important;
+                color: #e8e8e8 !important;
+            }
+
+            .notif-full-msg {
+                display: none;
+                font-size: 13px !important;
+                line-height: 1.55 !important;
+                margin: 4px 0 6px 0 !important;
+                color: #ccc !important;
+                word-wrap: break-word !important;
+                overflow-wrap: anywhere !important;
+                background: rgba(255,255,255,0.05) !important;
+                border-radius: 6px !important;
+                padding: 8px !important;
+            }
+
+            .notif-actions {
+                display: flex !important;
+                align-items: center !important;
+                gap: 8px !important;
+                margin-top: 6px !important;
+                flex-wrap: wrap !important;
+            }
+
+            .notif-expand-btn {
+                background: transparent !important;
+                border: 1px solid rgba(255,255,255,0.2) !important;
+                color: #bbb !important;
+                font-size: 11px !important;
+                font-weight: 600 !important;
+                padding: 2px 9px !important;
+                border-radius: 20px !important;
+                cursor: pointer !important;
+                transition: all 0.2s !important;
+            }
+            .notif-expand-btn:hover {
+                background: rgba(255,255,255,0.1) !important;
+                color: #fff !important;
+            }
+
+            .notif-view-link {
+                font-size: 11px !important;
+                font-weight: 600 !important;
+                color: var(--accent-1, #c8883a) !important;
+                text-decoration: none !important;
+                padding: 2px 9px !important;
+                border: 1px solid rgba(200,136,58,0.4) !important;
+                border-radius: 20px !important;
+                transition: all 0.2s !important;
+            }
+            .notif-view-link:hover {
+                background: rgba(200,136,58,0.15) !important;
             }
 
             .notif-time { 
                 display: block !important;
-                float: none !important; /* Overrides rogue floats */
-                font-size: 12px !important; 
-                color: #aaa !important;
+                font-size: 11px !important; 
+                color: #888 !important;
                 font-weight: 500 !important;
+                margin-top: 4px !important;
             }
 
             .notif-empty { 
@@ -213,9 +271,15 @@ function renderHeader() {
             html[data-theme="light"] .notif-header { border-color: #eee !important; color: #111 !important; }
             html[data-theme="light"] .notif-item { color: #222 !important; }
             html[data-theme="light"] .notif-msg { color: #333 !important; }
+            html[data-theme="light"] .notif-full-msg { background: rgba(0,0,0,0.04) !important; color: #444 !important; }
+            html[data-theme="light"] .notif-expand-btn { border-color: #ccc !important; color: #555 !important; }
+            html[data-theme="light"] .notif-clear-btn { border-color: #ccc !important; color: #777 !important; }
+            html[data-theme="light"] .notif-clear-btn:hover { background: rgba(239,68,68,0.08) !important; border-color: #ef4444 !important; color: #ef4444 !important; }
             html[data-theme="light"] .notif-bell { border-color: #ddd !important; background: #f9f9f9 !important; color: #111 !important; }
             html[data-theme="light"] .notif-bell:hover { background: #eee !important; }
-            html[data-theme="light"] .notif-item:hover { background: #f5f5f5 !important; }
+            html[data-theme="light"] .notif-item:hover { background: rgba(0,0,0,0.04) !important; }
+            html[data-theme="light"] .notif-item.unread { background: rgba(200,136,58,0.08) !important; }
+            html[data-theme="light"] .notif-time { color: #999 !important; }
         </style>
     </head>
     <body>
@@ -256,16 +320,37 @@ function renderHeader() {
                         </button>
 
                         <div class="notif-panel" id="notifPanel">
-                            <div class="notif-header">Activity</div>
+                            <div class="notif-header">
+                                <span>Activity</span>
+                                <button id="clearNotifsBtn" class="notif-clear-btn">Clear All</button>
+                            </div>
                             <div class="notif-body">
                                 <?php if (empty($recent_notifications)): ?>
                                     <div class="notif-empty">You're all caught up.</div>
                                 <?php else: ?>
-                                    <?php foreach ($recent_notifications as $notif): ?>
-                                        <a href="<?= htmlspecialchars($notif['link'] ?? '#') ?>" class="notif-item <?= $notif['is_read'] ? '' : 'unread' ?>">
-                                            <span class="notif-msg"><?= htmlspecialchars($notif['message']) ?></span>
+                                    <?php foreach ($recent_notifications as $notif): 
+                                        $fullMsg  = $notif['message'];
+                                        $isLong   = mb_strlen($fullMsg) > 70;
+                                        $preview  = $isLong ? mb_substr($fullMsg, 0, 70) . '…' : $fullMsg;
+                                        $isAdmin  = ($notif['type'] === 'admin_reply');
+                                        $hasLink  = !empty($notif['link']) && $notif['link'] !== '#';
+                                        $needsExpand = $isLong;
+                                    ?>
+                                        <div class="notif-item <?= $notif['is_read'] ? '' : 'unread' ?>">
+                                            <span class="notif-msg"><?= htmlspecialchars($preview) ?></span>
+                                            <?php if ($needsExpand): ?>
+                                                <span class="notif-full-msg"><?= htmlspecialchars($fullMsg) ?></span>
+                                            <?php endif; ?>
+                                            <div class="notif-actions">
+                                                <?php if ($needsExpand): ?>
+                                                    <button class="notif-expand-btn" onclick="toggleNotifExpand(this)">Expand</button>
+                                                <?php endif; ?>
+                                                <?php if (!$isAdmin && $hasLink): ?>
+                                                    <a href="<?= htmlspecialchars($notif['link']) ?>" class="notif-view-link">View →</a>
+                                                <?php endif; ?>
+                                            </div>
                                             <span class="notif-time"><?= date('M j, g:i A', strtotime($notif['created_at'])) ?></span>
-                                        </a>
+                                        </div>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
                             </div>
@@ -343,39 +428,57 @@ function renderFooter() {
                 });
             });
 
-            // --- REDESIGNED NOTIFICATION JS ---
+            // --- NOTIFICATION JS ---
             const notifToggle = document.getElementById('notifToggle');
-            const notifPanel = document.getElementById('notifPanel');
-            const notifBadge = document.getElementById('notifBadge');
+            const notifPanel  = document.getElementById('notifPanel');
+            const notifBadge  = document.getElementById('notifBadge');
+            const clearBtn    = document.getElementById('clearNotifsBtn');
 
             if (notifToggle && notifPanel) {
-                // Toggle dropdown
                 notifToggle.addEventListener('click', function(e) {
                     e.stopPropagation();
                     notifPanel.classList.toggle('show');
 
-                    // Clear unread badge
                     if (notifPanel.classList.contains('show') && notifBadge) {
-                        notifBadge.style.display = 'none'; 
-
-                        // AJAX call
-                        const formData = new FormData();
-                        formData.append('ajax_mark_notifications_read', '1');
-                        fetch('/config.php', { method: 'POST', body: formData }).catch(() => {});
-
-                        // Remove glowing dots
-                        document.querySelectorAll('.notif-item.unread').forEach(item => {
-                            item.classList.remove('unread');
-                        });
+                        notifBadge.style.display = 'none';
+                        const fd = new FormData();
+                        fd.append('ajax_mark_notifications_read', '1');
+                        fetch('/config.php', { method: 'POST', body: fd }).catch(() => {});
+                        document.querySelectorAll('.notif-item.unread').forEach(item => item.classList.remove('unread'));
                     }
                 });
 
-                // Close when clicking outside
                 document.addEventListener('click', function(e) {
                     if (!notifToggle.contains(e.target) && !notifPanel.contains(e.target)) {
                         notifPanel.classList.remove('show');
                     }
                 });
+            }
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const fd = new FormData();
+                    fd.append('ajax_clear_all_notifications', '1');
+                    fetch('/config.php', { method: 'POST', body: fd })
+                        .then(() => {
+                            const body = document.querySelector('.notif-body');
+                            if (body) body.innerHTML = '<div class="notif-empty">You\'re all caught up.</div>';
+                            if (notifBadge) notifBadge.style.display = 'none';
+                        })
+                        .catch(() => {});
+                });
+            }
+
+            function toggleNotifExpand(btn) {
+                const item     = btn.closest('.notif-item');
+                const preview  = item.querySelector('.notif-msg');
+                const fullMsg  = item.querySelector('.notif-full-msg');
+                if (!fullMsg) return;
+                const expanded = fullMsg.style.display === 'block';
+                fullMsg.style.display  = expanded ? 'none' : 'block';
+                preview.style.display  = expanded ? 'block' : 'none';
+                btn.textContent = expanded ? 'Expand' : 'Collapse';
             }
         </script>
     </body>

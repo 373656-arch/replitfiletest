@@ -5,6 +5,15 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
+$conn->query("CREATE TABLE IF NOT EXISTS qa_replies (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    answer_id INT NOT NULL,
+    user_id INT NOT NULL,
+    content TEXT NOT NULL,
+    date_posted TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX (answer_id)
+)");
+
 $error_msg = '';
 $success_msg = '';
 
@@ -34,30 +43,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $answer_id = (int)$_POST['answer_id'];
         $user_id = (int)$_SESSION['user_id'];
 
-        // Check database instead of temporary session
         $check_stmt = $conn->prepare("SELECT id FROM qa_upvotes WHERE user_id = ? AND answer_id = ?");
         $check_stmt->bind_param("ii", $user_id, $answer_id);
         $check_stmt->execute();
 
         if ($check_stmt->get_result()->num_rows === 0) {
-            // Save the vote permanently
             $ins_stmt = $conn->prepare("INSERT INTO qa_upvotes (user_id, answer_id) VALUES (?, ?)");
             $ins_stmt->bind_param("ii", $user_id, $answer_id);
             $ins_stmt->execute();
 
-            // Update the answer count securely using prepared statements
             $upd_stmt = $conn->prepare("UPDATE qa_answers SET upvotes = upvotes + 1 WHERE id = ?");
             $upd_stmt->bind_param("i", $answer_id);
             $upd_stmt->execute();
 
-            $res_stmt = $conn->prepare("SELECT upvotes FROM qa_answers WHERE id = ?");
+            $res_stmt = $conn->prepare("SELECT upvotes, user_id FROM qa_answers WHERE id = ?");
             $res_stmt->bind_param("i", $answer_id);
             $res_stmt->execute();
-            $new_count = $res_stmt->get_result()->fetch_assoc()['upvotes'];
+            $ans_row  = $res_stmt->get_result()->fetch_assoc();
+            $new_count = $ans_row['upvotes'];
+            $ans_owner = $ans_row['user_id'];
+
+            if ($ans_owner != $user_id) {
+                $u_data = getUserData($user_id);
+                createNotification($ans_owner, 'like', $u_data['username'] . " upvoted your answer.", "/faq.php", $user_id);
+            }
 
             echo json_encode(['success' => true, 'new_count' => $new_count]);
         } else {
             echo json_encode(['success' => false, 'error' => 'Already voted!']);
+        }
+        exit;
+    }
+
+    if ($action === 'add_faq_reply' && $is_ajax) {
+        if (!isLoggedIn()) {
+            echo json_encode(['success' => false, 'error' => 'Log in to reply.']);
+            exit;
+        }
+        $answer_id = (int)$_POST['answer_id'];
+        $content   = trim($_POST['content'] ?? '');
+        if ($content === '') {
+            echo json_encode(['success' => false, 'error' => 'Reply cannot be empty.']);
+            exit;
+        }
+        $stmt = $conn->prepare("INSERT INTO qa_replies (answer_id, user_id, content) VALUES (?, ?, ?)");
+        $stmt->bind_param("iis", $answer_id, $_SESSION['user_id'], $content);
+        if ($stmt->execute()) {
+            $owner_stmt = $conn->prepare("SELECT user_id FROM qa_answers WHERE id = ?");
+            $owner_stmt->bind_param("i", $answer_id);
+            $owner_stmt->execute();
+            $ans_owner = $owner_stmt->get_result()->fetch_assoc()['user_id'] ?? null;
+            if ($ans_owner && $ans_owner != $_SESSION['user_id']) {
+                $u_data = getUserData($_SESSION['user_id']);
+                $preview = mb_strlen($content) > 60 ? mb_substr($content, 0, 60) . '…' : $content;
+                createNotification($ans_owner, 'reply', $u_data['username'] . ' replied to your answer: "' . $preview . '"', "/faq.php", $_SESSION['user_id']);
+            }
+            $u = getUserData($_SESSION['user_id']);
+            echo json_encode(['success' => true, 'username' => $u['username'], 'content' => htmlspecialchars($content), 'date' => date('M j, Y')]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Failed to post reply.']);
         }
         exit;
     }
@@ -101,6 +145,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->bind_param("iis", $question_id, $_SESSION['user_id'], $content);
                     if ($stmt->execute()) {
                         $success_msg = "Answer posted!";
+                        $owner_stmt = $conn->prepare("SELECT user_id FROM qa_questions WHERE id = ?");
+                        $owner_stmt->bind_param("i", $question_id);
+                        $owner_stmt->execute();
+                        $q_owner = $owner_stmt->get_result()->fetch_assoc()['user_id'] ?? null;
+                        if ($q_owner && $q_owner != $_SESSION['user_id']) {
+                            $u_data = getUserData($_SESSION['user_id']);
+                            createNotification($q_owner, 'comment', $u_data['username'] . " answered your question.", "/faq.php", $_SESSION['user_id']);
+                        }
                     }
                 }
             }
@@ -339,7 +391,7 @@ details p {
                             $answers = $ans_stmt->get_result();
                             while ($ans = $answers->fetch_assoc()):
                             ?>
-                                <div class="answer-block">
+                                <div class="answer-block" id="answer-<?php echo $ans['id']; ?>">
                                     <div class="upvote-col">
                                         <?php $has_voted = in_array($ans['id'], $user_upvotes); ?>
                                         <button class="upvote-btn" 
@@ -353,6 +405,35 @@ details p {
                                     <div style="flex: 1;">
                                         <p style="margin-bottom: 0.4rem; font-size: 0.9rem; line-height: 1.5;"><?php echo nl2br(htmlspecialchars($ans['content'])); ?></p>
                                         <span class="text-muted fs-085">by <strong style="color: var(--text-primary);"><?php echo htmlspecialchars($ans['username']); ?></strong></span>
+
+                                        <?php
+                                        $rep_stmt = $conn->prepare("SELECT r.*, u.username FROM qa_replies r JOIN users u ON r.user_id = u.uid WHERE r.answer_id = ? ORDER BY r.date_posted ASC");
+                                        $rep_stmt->bind_param("i", $ans['id']);
+                                        $rep_stmt->execute();
+                                        $replies = $rep_stmt->get_result();
+                                        if ($replies->num_rows > 0): ?>
+                                            <div class="faq-replies" id="replies-<?php echo $ans['id']; ?>" style="margin-top: 0.75rem; padding-left: 1rem; border-left: 2px solid var(--border-color);">
+                                                <?php while ($rep = $replies->fetch_assoc()): ?>
+                                                    <div class="faq-reply" style="font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--text-secondary);">
+                                                        <strong style="color: var(--accent-2);"><?php echo htmlspecialchars($rep['username']); ?></strong>:
+                                                        <?php echo nl2br(htmlspecialchars($rep['content'])); ?>
+                                                        <span style="font-size: 0.75rem; color: var(--text-secondary); margin-left: 0.4rem;"><?php echo date('M j', strtotime($rep['date_posted'])); ?></span>
+                                                    </div>
+                                                <?php endwhile; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="faq-replies" id="replies-<?php echo $ans['id']; ?>" style="margin-top: 0.75rem; padding-left: 1rem; border-left: 2px solid var(--border-color); display: none;"></div>
+                                        <?php endif; ?>
+
+                                        <?php if (isLoggedIn()): ?>
+                                            <button onclick="toggleFaqReplyForm(<?php echo $ans['id']; ?>)" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem; padding: 0.3rem 0.75rem; font-size: 0.8rem;">Reply</button>
+                                            <div id="faq-reply-form-<?php echo $ans['id']; ?>" style="display: none; margin-top: 0.5rem;">
+                                                <div style="display: flex; gap: 0.5rem;">
+                                                    <input type="text" id="faq-reply-input-<?php echo $ans['id']; ?>" placeholder="Write a reply…" style="flex: 1; margin: 0; font-size: 0.85rem;">
+                                                    <button onclick="submitFaqReply(<?php echo $ans['id']; ?>)" class="btn btn-secondary btn-sm" style="white-space: nowrap;">Post</button>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             <?php endwhile; ?>
@@ -440,6 +521,49 @@ function upvoteAnswer(answerId, btnElement) {
             }
         })
         .catch(err => console.error('Error upvoting:', err));
+}
+
+function toggleFaqReplyForm(answerId) {
+    const form = document.getElementById('faq-reply-form-' + answerId);
+    if (!form) return;
+    const visible = form.style.display === 'block';
+    form.style.display = visible ? 'none' : 'block';
+    if (!visible) {
+        const input = document.getElementById('faq-reply-input-' + answerId);
+        if (input) input.focus();
+    }
+}
+
+function submitFaqReply(answerId) {
+    const input = document.getElementById('faq-reply-input-' + answerId);
+    if (!input || !input.value.trim()) return;
+
+    const formData = new FormData();
+    formData.append('ajax', '1');
+    formData.append('action', 'add_faq_reply');
+    formData.append('answer_id', answerId);
+    formData.append('content', input.value.trim());
+
+    fetch(window.location.href, { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const repliesBox = document.getElementById('replies-' + answerId);
+                if (repliesBox) {
+                    repliesBox.style.display = 'block';
+                    const div = document.createElement('div');
+                    div.className = 'faq-reply';
+                    div.style.cssText = 'font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--text-secondary);';
+                    div.innerHTML = '<strong style="color: var(--accent-2);">' + data.username + '</strong>: ' + data.content + ' <span style="font-size: 0.75rem; color: var(--text-secondary); margin-left: 0.4rem;">' + data.date + '</span>';
+                    repliesBox.appendChild(div);
+                }
+                input.value = '';
+                document.getElementById('faq-reply-form-' + answerId).style.display = 'none';
+            } else {
+                alert(data.error || 'Failed to post reply.');
+            }
+        })
+        .catch(err => console.error('Error posting reply:', err));
 }
 
 let timeout = null;
