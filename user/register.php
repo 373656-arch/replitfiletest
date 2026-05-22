@@ -36,7 +36,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param("sss", $email, $username, $password_hash);
             
             if ($stmt->execute()) {
-                header('Location: login.php?registered=success');
+                // Fetch the newly created user's ID
+                $new_user_id = $stmt->insert_id;
+
+                // Set the session variables exactly like login.php does
+                $_SESSION['user_id'] = $new_user_id;
+                $_SESSION['username'] = $username;
+                $_SESSION['email'] = $email;
+
+                // Redirect them to the main application page instead of login
+                header('Location: /index.php');
                 exit;
             } else {
                 $error = 'Registration failed. Please try again.';
