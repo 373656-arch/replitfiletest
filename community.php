@@ -142,37 +142,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // --- NOTIFICATION: COMMENT / REPLY ---
             $u_data = getUserData($_SESSION['user_id']);
+            $content_preview = mb_strlen($content) > 60 ? mb_substr($content, 0, 60) . '…' : $content;
             if ($parent_id === null) {
-                // It's a top-level comment, notify the build owner
                 $owner_stmt = $conn->prepare("SELECT user_id FROM builds WHERE build_id = ?");
                 $owner_stmt->bind_param("i", $build_id);
                 $owner_stmt->execute();
                 $owner_id = $owner_stmt->get_result()->fetch_assoc()['user_id'];
 
                 if ($owner_id != $_SESSION['user_id']) {
-                    createNotification($owner_id, 'comment', $u_data['username'] . " commented on your build.", "/community.php?build=" . $build_id, $_SESSION['user_id']);
+                    createNotification($owner_id, 'comment',
+                        $u_data['username'] . ' commented: "' . $content_preview . '"',
+                        "/community.php?build=" . $build_id . "#comment-" . $new_comment_id,
+                        $_SESSION['user_id']);
                 }
             } else {
-                // It's a reply, notify the parent comment owner
                 $parent_stmt = $conn->prepare("SELECT user_id FROM comments WHERE comment_id = ?");
                 $parent_stmt->bind_param("i", $parent_id);
                 $parent_stmt->execute();
                 $parent_owner_id = $parent_stmt->get_result()->fetch_assoc()['user_id'];
 
                 if ($parent_owner_id != $_SESSION['user_id']) {
-                    createNotification($parent_owner_id, 'reply', $u_data['username'] . " replied to your comment.", "/community.php?build=" . $build_id, $_SESSION['user_id']);
+                    createNotification($parent_owner_id, 'reply',
+                        $u_data['username'] . ' replied: "' . $content_preview . '"',
+                        "/community.php?build=" . $build_id . "#comment-" . $new_comment_id,
+                        $_SESSION['user_id']);
                 }
             }
 
             if ($is_ajax) {
-                // Fetch user info to render the HTML
                 $user = getUserData($_SESSION['user_id']);
                 $date_posted = date('M j, Y');
                 $is_reply = ($parent_id !== null);
 
-                ob_start(); // Buffer the HTML snippet to send back
+                ob_start();
                 ?>
-                <div class="comment <?php echo $is_reply ? 'reply' : ''; ?>">
+                <div class="comment <?php echo $is_reply ? 'reply' : ''; ?>" id="comment-<?php echo $new_comment_id; ?>">
                     <div class="comment-header">
                         <a href="/public_profile.php?username=<?php echo urlencode($user['username']); ?>" style="color: var(--accent-2); text-decoration: none;"><span class="comment-author"><?php echo htmlspecialchars($user['username']); ?></span></a>
                         <span style="font-size: 0.9rem; opacity: 0.7;"><?php echo $date_posted; ?></span>
@@ -498,7 +502,7 @@ renderHeader();
 
             <div id="comments-list">
                 <?php while ($comment = $comments->fetch_assoc()): ?>
-                    <div class="comment">
+                    <div class="comment" id="comment-<?php echo (int)$comment['comment_id']; ?>">
                         <div class="comment-header">
                             <a href="/public_profile.php?username=<?php echo urlencode($comment['username']); ?>" class="creator-link"><span class="comment-author"><?php echo htmlspecialchars($comment['username']); ?></span></a>
                             <span class="comment-date"><?php echo date('M j, Y', strtotime($comment['date_posted'])); ?></span>
@@ -553,7 +557,7 @@ renderHeader();
 
                         <div id="replies-container-<?php echo (int)$comment['comment_id']; ?>" class="replies-container" style="display: none;">
                             <?php foreach ($replies_array as $reply): ?>
-                                <div class="comment reply">
+                                <div class="comment reply" id="comment-<?php echo (int)$reply['comment_id']; ?>">
                                     <div class="comment-header">
                                         <a href="/public_profile.php?username=<?php echo urlencode($reply['username']); ?>" class="creator-link"><span class="comment-author"><?php echo htmlspecialchars($reply['username']); ?></span></a>
                                         <span class="comment-date"><?php echo date('M j, Y', strtotime($reply['date_posted'])); ?></span>
@@ -715,6 +719,34 @@ function filterCommunity() {
 
     if (noResults) noResults.style.display = visible.length === 0 ? 'block' : 'none';
 }
+
+// --- Hash-scroll: jump to and highlight a specific comment ---
+function scrollToComment() {
+    const hash = window.location.hash;
+    if (!hash || !hash.startsWith('#comment-')) return;
+    const el = document.getElementById(hash.substring(1));
+    if (!el) return;
+
+    // If it's inside a collapsed replies container, expand it first
+    const container = el.closest('[id^="replies-container-"]');
+    if (container && container.style.display === 'none') {
+        container.style.display = 'block';
+        const pid = container.id.replace('replies-container-', '');
+        const btn = document.querySelector('.toggle-replies[onclick*="toggleReplies(' + pid + ')"]');
+        if (btn) {
+            const cnt = document.getElementById('reply-count-' + pid);
+            btn.textContent = 'Hide Replies (' + (cnt ? cnt.textContent : '') + ')';
+        }
+    }
+
+    setTimeout(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.transition = 'background-color 0.4s ease';
+        el.style.backgroundColor = 'rgba(200, 136, 58, 0.35)';
+        setTimeout(() => { el.style.backgroundColor = ''; }, 2000);
+    }, 350);
+}
+window.addEventListener('load', scrollToComment);
 </script>
 
 <?php renderFooter(); ?>
