@@ -45,24 +45,25 @@ function renderHeader() {
             }
 
             .notif-bell {
-                background: rgba(255, 255, 255, 0.05) !important;
-                border: 1px solid rgba(255, 255, 255, 0.1) !important;
-                border-radius: 50% !important;
-                width: 40px !important; 
-                height: 40px !important;
+                background: transparent !important;
+                border: none !important;
+                border-radius: 4px !important;
+                width: 36px !important; 
+                height: 36px !important;
                 display: flex !important; 
                 align-items: center !important; 
                 justify-content: center !important;
                 cursor: pointer !important; 
                 color: inherit !important;
-                transition: all 0.3s ease !important;
+                transition: all 0.2s ease !important;
                 padding: 0 !important;
-                margin: 0 5px !important;
+                margin: 0 3px !important;
+                opacity: 0.75 !important;
             }
 
             .notif-bell:hover { 
-                background: rgba(255, 255, 255, 0.15) !important; 
-                transform: translateY(-2px) !important; 
+                opacity: 1 !important;
+                transform: translateY(-1px) !important; 
             }
 
             .notif-badge {
@@ -182,6 +183,18 @@ function renderHeader() {
             .notif-item.unread { 
                 background: rgba(200, 136, 58, 0.12) !important;
                 border-left: 3px solid var(--accent-1, #c8883a) !important;
+            }
+
+            .notif-item.admin-notif {
+                background: rgba(239, 68, 68, 0.1) !important;
+                border-left: 3px solid #ef4444 !important;
+            }
+            .notif-item.admin-notif .notif-view-link {
+                border-color: rgba(239, 68, 68, 0.4) !important;
+                color: #ef4444 !important;
+            }
+            .notif-item.admin-notif .notif-view-link:hover {
+                background: rgba(239, 68, 68, 0.12) !important;
             }
 
             .notif-msg { 
@@ -329,27 +342,33 @@ function renderHeader() {
                                     <div class="notif-empty">You're all caught up.</div>
                                 <?php else: ?>
                                     <?php foreach ($recent_notifications as $notif): 
-                                        $fullMsg  = $notif['message'];
-                                        $isLong   = mb_strlen($fullMsg) > 70;
-                                        $preview  = $isLong ? mb_substr($fullMsg, 0, 70) . '…' : $fullMsg;
-                                        $isAdmin  = ($notif['type'] === 'admin_reply');
-                                        $hasLink  = !empty($notif['link']) && $notif['link'] !== '#';
+                                        $fullMsg     = $notif['message'];
+                                        $isLong      = mb_strlen($fullMsg) > 70;
+                                        $preview     = $isLong ? mb_substr($fullMsg, 0, 70) . '…' : $fullMsg;
+                                        $isAdminType = ($notif['type'] === 'admin_reply');
+                                        $isAdminCtx  = ($notif['type'] === 'admin_contact');
+                                        $hasLink     = !empty($notif['link']) && $notif['link'] !== '#';
                                         $needsExpand = $isLong;
+                                        $itemClasses = trim(($notif['is_read'] ? '' : 'unread') . ($isAdminCtx ? ' admin-notif' : ''));
                                     ?>
-                                        <div class="notif-item <?= $notif['is_read'] ? '' : 'unread' ?>">
+                                        <div class="notif-item <?= $itemClasses ?>"
+                                             data-notif-id="<?= (int)$notif['id'] ?>"
+                                             data-ts="<?= htmlspecialchars($notif['created_at']) ?>"
+                                             data-full="<?= htmlspecialchars($fullMsg) ?>"
+                                             data-preview="<?= htmlspecialchars($preview) ?>"
+                                             data-type="<?= htmlspecialchars($notif['type']) ?>">
                                             <span class="notif-msg"><?= htmlspecialchars($preview) ?></span>
-                                            <?php if ($needsExpand): ?>
-                                                <span class="notif-full-msg"><?= htmlspecialchars($fullMsg) ?></span>
-                                            <?php endif; ?>
                                             <div class="notif-actions">
                                                 <?php if ($needsExpand): ?>
                                                     <button class="notif-expand-btn" onclick="toggleNotifExpand(this)">Expand</button>
                                                 <?php endif; ?>
-                                                <?php if (!$isAdmin && $hasLink): ?>
+                                                <?php if ($isAdminCtx && $isUserAdmin): ?>
+                                                    <a href="/admin.php?section=messages" class="notif-view-link">View Messages →</a>
+                                                <?php elseif (!$isAdminType && !$isAdminCtx && $hasLink): ?>
                                                     <a href="<?= htmlspecialchars($notif['link']) ?>" class="notif-view-link">View →</a>
                                                 <?php endif; ?>
                                             </div>
-                                            <span class="notif-time"><?= date('M j, g:i A', strtotime($notif['created_at'])) ?></span>
+                                            <span class="notif-time" data-ts="<?= htmlspecialchars($notif['created_at']) ?>"></span>
                                         </div>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
@@ -428,24 +447,71 @@ function renderFooter() {
                 });
             });
 
-            // --- NOTIFICATION JS ---
+            // --- NOTIFICATION SYSTEM ---
+            const IS_ADMIN    = <?= $isUserAdmin ? 'true' : 'false' ?>;
             const notifToggle = document.getElementById('notifToggle');
             const notifPanel  = document.getElementById('notifPanel');
-            const notifBadge  = document.getElementById('notifBadge');
+            let   notifBadge  = document.getElementById('notifBadge');
             const clearBtn    = document.getElementById('clearNotifsBtn');
 
+            // Format stored UTC timestamp into local time
+            function fmtTime(ts) {
+                if (!ts) return '';
+                const d = new Date(ts.replace(' ', 'T') + 'Z');
+                return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+            }
+
+            // Apply local time to all .notif-time elements
+            function applyLocalTimes() {
+                document.querySelectorAll('.notif-time[data-ts]').forEach(el => {
+                    el.textContent = fmtTime(el.dataset.ts);
+                });
+            }
+            applyLocalTimes();
+
+            // Mark one notification as read visually + via AJAX
+            function markItemRead(item) {
+                if (!item.classList.contains('unread')) return;
+                item.classList.remove('unread');
+                const fd = new FormData();
+                fd.append('ajax_mark_single_notif_read', '1');
+                fd.append('notif_id', item.dataset.notifId || '0');
+                fetch('/config.php', { method: 'POST', body: fd }).catch(() => {});
+                // Update badge count
+                const remaining = document.querySelectorAll('.notif-item.unread').length;
+                if (notifBadge) {
+                    if (remaining === 0) notifBadge.style.display = 'none';
+                    else notifBadge.textContent = remaining;
+                }
+            }
+
+            // Clicking anywhere on a notification marks it read
+            document.addEventListener('click', function(e) {
+                const item = e.target.closest('.notif-item');
+                if (item) markItemRead(item);
+            });
+
+            // Expand / collapse message text in-place (single message, no duplicate)
+            function toggleNotifExpand(btn) {
+                const item    = btn.closest('.notif-item');
+                const msgSpan = item.querySelector('.notif-msg');
+                const expanded = item.dataset.expanded === '1';
+                if (expanded) {
+                    msgSpan.textContent = item.dataset.preview;
+                    btn.textContent     = 'Expand';
+                    item.dataset.expanded = '0';
+                } else {
+                    msgSpan.textContent = item.dataset.full;
+                    btn.textContent     = 'Collapse';
+                    item.dataset.expanded = '1';
+                }
+            }
+
+            // Toggle notification panel
             if (notifToggle && notifPanel) {
                 notifToggle.addEventListener('click', function(e) {
                     e.stopPropagation();
                     notifPanel.classList.toggle('show');
-
-                    if (notifPanel.classList.contains('show') && notifBadge) {
-                        notifBadge.style.display = 'none';
-                        const fd = new FormData();
-                        fd.append('ajax_mark_notifications_read', '1');
-                        fetch('/config.php', { method: 'POST', body: fd }).catch(() => {});
-                        document.querySelectorAll('.notif-item.unread').forEach(item => item.classList.remove('unread'));
-                    }
                 });
 
                 document.addEventListener('click', function(e) {
@@ -455,6 +521,7 @@ function renderFooter() {
                 });
             }
 
+            // Clear All
             if (clearBtn) {
                 clearBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
@@ -465,21 +532,89 @@ function renderFooter() {
                             const body = document.querySelector('.notif-body');
                             if (body) body.innerHTML = '<div class="notif-empty">You\'re all caught up.</div>';
                             if (notifBadge) notifBadge.style.display = 'none';
-                        })
-                        .catch(() => {});
+                        }).catch(() => {});
                 });
             }
 
-            function toggleNotifExpand(btn) {
-                const item     = btn.closest('.notif-item');
-                const preview  = item.querySelector('.notif-msg');
-                const fullMsg  = item.querySelector('.notif-full-msg');
-                if (!fullMsg) return;
-                const expanded = fullMsg.style.display === 'block';
-                fullMsg.style.display  = expanded ? 'none' : 'block';
-                preview.style.display  = expanded ? 'block' : 'none';
-                btn.textContent = expanded ? 'Expand' : 'Collapse';
+            // Build a notification item element from a raw notification object
+            function buildNotifEl(n) {
+                const full    = n.message || '';
+                const isLong  = full.length > 70;
+                const preview = isLong ? full.substring(0, 70) + '…' : full;
+                const isACtx  = n.type === 'admin_contact';
+                const isAType = n.type === 'admin_reply';
+                const hasLink = n.link && n.link !== '#';
+
+                const div = document.createElement('div');
+                let classes = 'notif-item unread';
+                if (isACtx) classes += ' admin-notif';
+                div.className = classes;
+                div.dataset.notifId  = n.id;
+                div.dataset.ts       = n.created_at;
+                div.dataset.full     = full;
+                div.dataset.preview  = preview;
+                div.dataset.type     = n.type;
+                div.dataset.expanded = '0';
+
+                let actionsHtml = '';
+                if (isLong) actionsHtml += `<button class="notif-expand-btn" onclick="toggleNotifExpand(this)">Expand</button>`;
+                if (isACtx && IS_ADMIN) {
+                    actionsHtml += `<a href="/admin.php?section=messages" class="notif-view-link">View Messages →</a>`;
+                } else if (!isAType && !isACtx && hasLink) {
+                    actionsHtml += `<a href="${n.link}" class="notif-view-link">View →</a>`;
+                }
+
+                div.innerHTML =
+                    `<span class="notif-msg">${preview.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>` +
+                    (actionsHtml ? `<div class="notif-actions">${actionsHtml}</div>` : '') +
+                    `<span class="notif-time" data-ts="${n.created_at}"></span>`;
+                return div;
             }
+
+            // Real-time polling: check for new notifications every 30s
+            let lastKnownId = <?php
+                $first = !empty($recent_notifications) ? (int)$recent_notifications[0]['id'] : 0;
+                echo $first;
+            ?>;
+
+            function pollNotifications() {
+                fetch('/config.php?ajax_poll_notifications=1&since_id=' + lastKnownId)
+                    .then(r => r.json())
+                    .then(data => {
+                        const newOnes = data.new_notifications || [];
+
+                        // Prepend new items to panel
+                        if (newOnes.length > 0) {
+                            const body = document.querySelector('.notif-body');
+                            const empty = body ? body.querySelector('.notif-empty') : null;
+                            if (empty) empty.remove();
+                            newOnes.forEach(n => {
+                                const el = buildNotifEl(n);
+                                if (body) body.insertBefore(el, body.firstChild);
+                                if (n.id > lastKnownId) lastKnownId = n.id;
+                            });
+                            applyLocalTimes();
+                        }
+
+                        // Update badge
+                        const count = data.count || 0;
+                        if (count > 0) {
+                            if (!notifBadge || notifBadge.style.display === 'none') {
+                                if (!notifBadge) {
+                                    notifBadge = document.createElement('span');
+                                    notifBadge.id        = 'notifBadge';
+                                    notifBadge.className = 'notif-badge';
+                                    if (notifToggle) notifToggle.appendChild(notifBadge);
+                                } else {
+                                    notifBadge.style.display = 'flex';
+                                }
+                            }
+                            notifBadge.textContent = count;
+                        }
+                    }).catch(() => {});
+            }
+
+            setInterval(pollNotifications, 30000);
         </script>
     </body>
     </html>
