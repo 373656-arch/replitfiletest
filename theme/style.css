@@ -115,7 +115,7 @@ header .logo {
     color: var(--text-primary);
     font-weight: 800;
     font-size: 1.3rem;
-    text-transform: uppercase;
+    text-transform: lowercase;
     letter-spacing: 0.06em;
 }
 
