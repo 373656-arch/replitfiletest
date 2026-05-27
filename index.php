@@ -181,34 +181,35 @@ renderHeader();
 <style>
 /* ── AI Assistant ── */
 #aiAssistantWrap {
-    margin-top: 20px;
+    margin-top: 0;
     position: relative;
 }
 #aiAssistantToggle {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    background: var(--accent-1);
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    padding: 10px 18px;
-    font-size: 0.9rem;
+    width: 100%;
+    background: var(--bg-tertiary);
+    color: var(--accent-1);
+    border: 1px solid var(--accent-1);
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 0.88rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s, transform 0.15s;
-    box-shadow: var(--shadow-md);
-    letter-spacing: 0.02em;
+    transition: background 0.2s, color 0.2s;
+    letter-spacing: 0.01em;
 }
-#aiAssistantToggle:hover { background: var(--accent-2); transform: translateY(-1px); }
+#aiAssistantToggle:hover { background: var(--accent-1); color: #fff; }
 .ai-panel {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 14px;
-    margin-top: 12px;
+    border-radius: 12px;
+    margin-top: 10px;
     overflow: hidden;
-    box-shadow: var(--shadow-lg);
-    max-width: 600px;
+    box-shadow: var(--shadow-md);
+    max-width: 100%;
     animation: aiSlideIn 0.2s ease;
 }
 @keyframes aiSlideIn {
@@ -535,12 +536,8 @@ renderHeader();
                     <div class="flex-wrap-gap" style="display: flex; gap: 10px; flex-direction: column;">
                         <button id="saveBuildBtn" class="btn" style="margin-top:10px;" onclick="showSaveModal()">Save Build</button>
                         <button id="clearBuildBtn" class="btn btn-outline-danger" style="display:none;" onclick="clearAllParts()">Clear All</button>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- AI Assistant Floating Button & Panel -->
+                        <!-- AI Assistant Floating Button & Panel -->
         <div id="aiAssistantWrap">
             <button id="aiAssistantToggle" onclick="toggleAIPanel()" title="AI Build Assistant">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
@@ -578,8 +575,12 @@ renderHeader();
                         </svg>
                     </button>
                 </div>
+                            </div>
+                    </div>
+                </div>
             </div>
         </div>
+    </div>
 
     <?php endif; ?>
 </div>
