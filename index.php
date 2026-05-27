@@ -84,6 +84,45 @@ if ($selected_car_id) {
     $parts = $parts_result ? $parts_result->fetch_all(MYSQLI_ASSOC) : [];
 }
 
+// Build a JSON-safe parts array for the AI assistant
+$ai_parts_json = 'null';
+if (!empty($parts) && $selected_car) {
+    $ai_parts_data = array_map(function($p) use ($selected_car) {
+        $pEng  = strtolower(trim($p['engine_code'] ?? ''));
+        $pChas = strtolower(trim($p['chassis_code'] ?? ''));
+        $carEng  = strtolower(trim($selected_car['engine_code'] ?? ''));
+        $carChas = strtolower(trim($selected_car['chassis_code'] ?? ''));
+        $year = (int)$selected_car['year'];
+        $yStart = (int)($p['year_start'] ?? 0);
+        $yEnd   = (int)($p['year_end'] ?? 9999);
+
+        if ($pEng === '' && $pChas === '') {
+            $compatible = true;
+        } else {
+            $compatible = ($pEng !== '' && $carEng !== '' && $pEng === $carEng)
+                       || ($pChas !== '' && $carChas !== '' && $pChas === $carChas);
+        }
+        if ($year && $yStart && $yEnd) {
+            $compatible = $compatible && ($year >= $yStart && $year <= $yEnd);
+        }
+
+        return [
+            'id'        => (int)$p['part_id'],
+            'name'      => $p['name'],
+            'category'  => $p['category'],
+            'price'     => (float)$p['price'],
+            'hp_gain'   => (int)($p['hp_gain'] ?? 0),
+            'compatible'=> $compatible,
+            'link'      => $p['link'] ?? '',
+            'engine'    => $p['engine_code'] ?? '',
+            'chassis'   => $p['chassis_code'] ?? '',
+            'year_start'=> (int)($p['year_start'] ?? 0),
+            'year_end'  => (int)($p['year_end'] ?? 9999),
+        ];
+    }, $parts);
+    $ai_parts_json = json_encode($ai_parts_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
     if (!isLoggedIn()) { header('Location: /user/login.php'); exit; }
     $build_title = trim($_POST['build_title'] ?? '');
@@ -139,6 +178,146 @@ $pageTitle = $selected_car ? "Build Your Car - ModMyCar" : "ModMyCar — Mod You
 require_once 'includes/headerFooter.php';
 renderHeader();
 ?>
+<style>
+/* ── AI Assistant ── */
+#aiAssistantWrap {
+    margin-top: 20px;
+    position: relative;
+}
+#aiAssistantToggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-1);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    box-shadow: var(--shadow-md);
+    letter-spacing: 0.02em;
+}
+#aiAssistantToggle:hover { background: var(--accent-2); transform: translateY(-1px); }
+.ai-panel {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    margin-top: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    max-width: 600px;
+    animation: aiSlideIn 0.2s ease;
+}
+@keyframes aiSlideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.ai-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+}
+.ai-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--accent-1);
+}
+.ai-panel-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.15s;
+}
+.ai-panel-close:hover { color: var(--text-primary); }
+.ai-messages {
+    padding: 16px;
+    max-height: 280px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.ai-msg { display: flex; }
+.ai-msg-bot  { justify-content: flex-start; }
+.ai-msg-user { justify-content: flex-end; }
+.ai-msg-bubble {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+.ai-msg-bot .ai-msg-bubble {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-bottom-left-radius: 3px;
+}
+.ai-msg-user .ai-msg-bubble {
+    background: var(--accent-1);
+    color: #fff;
+    border-bottom-right-radius: 3px;
+}
+.ai-msg-thinking .ai-msg-bubble { color: var(--text-secondary); font-style: italic; }
+.ai-actions-applied {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+.ai-action-tag {
+    font-size: 0.78rem;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+.ai-action-tag.added   { background: rgba(100,200,100,0.15); color: #5c9e5c; border: 1px solid #5c9e5c44; }
+.ai-action-tag.removed { background: rgba(200,100,100,0.15); color: #c05050; border: 1px solid #c0505044; }
+.ai-input-row {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+}
+.ai-input {
+    flex: 1;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 9px 13px;
+    color: var(--text-primary);
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.ai-input:focus { border-color: var(--accent-1); }
+.ai-send-btn {
+    background: var(--accent-1);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+}
+.ai-send-btn:hover { background: var(--accent-2); }
+.ai-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
 
 
 <?php if (!$selected_car): ?>
@@ -360,6 +539,48 @@ renderHeader();
                 </div>
             </div>
         </div>
+
+        <!-- AI Assistant Floating Button & Panel -->
+        <div id="aiAssistantWrap">
+            <button id="aiAssistantToggle" onclick="toggleAIPanel()" title="AI Build Assistant">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a1.75 1.75 0 0 1-1.267 1.679l-.323.093A2.31 2.31 0 0 1 10 11.584V12H6v-.416a2.31 2.31 0 0 1-1.41-1.093l-.323-.093A1.75 1.75 0 0 1 3 9.219zm4.247 2.024.062.14a.5.5 0 0 0 .461.308h.46a.5.5 0 0 0 .461-.308l.062-.14A1 1 0 0 1 9.6 9.988l.2-.3a.5.5 0 0 0 .083-.276V8.52a25 25 0 0 0-3.766 0v.892a.5.5 0 0 0 .083.276l.2.3a1 1 0 0 1 .847.566"/>
+                    <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8"/>
+                </svg>
+                <span>AI Assistant</span>
+            </button>
+
+            <div id="aiAssistantPanel" class="ai-panel" style="display:none;">
+                <div class="ai-panel-header">
+                    <div class="ai-panel-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a1.75 1.75 0 0 1-1.267 1.679l-.323.093A2.31 2.31 0 0 1 10 11.584V12H6v-.416a2.31 2.31 0 0 1-1.41-1.093l-.323-.093A1.75 1.75 0 0 1 3 9.219zm4.247 2.024.062.14a.5.5 0 0 0 .461.308h.46a.5.5 0 0 0 .461-.308l.062-.14A1 1 0 0 1 9.6 9.988l.2-.3a.5.5 0 0 0 .083-.276V8.52a25 25 0 0 0-3.766 0v.892a.5.5 0 0 0 .083.276l.2.3a1 1 0 0 1 .847.566"/>
+                            <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8"/>
+                        </svg>
+                        AI Build Assistant
+                    </div>
+                    <button class="ai-panel-close" onclick="toggleAIPanel()">✕</button>
+                </div>
+
+                <div id="aiMessages" class="ai-messages">
+                    <div class="ai-msg ai-msg-bot">
+                        <div class="ai-msg-bubble">
+                            Hey! I'm your build assistant. Tell me what you're going for — like <em>"build me a performance setup"</em>, <em>"add a better exhaust"</em>, or <em>"clear my build and start fresh"</em>.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ai-input-row">
+                    <input type="text" id="aiInput" class="ai-input" placeholder="Ask me to build something..." onkeydown="if(event.key==='Enter') sendAIMessage()">
+                    <button id="aiSendBtn" class="ai-send-btn" onclick="sendAIMessage()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 1.59 2.498C8 14 8 13 8 12.5a4.5 4.5 0 0 1 5.026-4.47zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
     <?php endif; ?>
 </div>
 
@@ -784,6 +1005,160 @@ function prepareBuildData() {
 <?php if ($selected_car): ?>
 fetchStockHP();
 <?php endif; ?>
+
+// ── AI Assistant ──
+const AI_PARTS = <?= $ai_parts_json ?? 'null'; ?>;
+
+// Map part_id (as string or number) → part object for fast lookup
+const AI_PARTS_MAP = {};
+if (AI_PARTS) {
+    AI_PARTS.forEach(p => { AI_PARTS_MAP[String(p.id)] = p; });
+}
+
+function toggleAIPanel() {
+    const panel = document.getElementById('aiAssistantPanel');
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        document.getElementById('aiInput').focus();
+        scrollAIMessages();
+    }
+}
+
+function scrollAIMessages() {
+    const box = document.getElementById('aiMessages');
+    if (box) box.scrollTop = box.scrollHeight;
+}
+
+function appendAIMessage(role, html, extraClass) {
+    const box = document.getElementById('aiMessages');
+    const row = document.createElement('div');
+    row.className = 'ai-msg ai-msg-' + role + (extraClass ? ' ' + extraClass : '');
+    row.innerHTML = '<div class="ai-msg-bubble">' + html + '</div>';
+    box.appendChild(row);
+    scrollAIMessages();
+    return row;
+}
+
+async function sendAIMessage() {
+    const input = document.getElementById('aiInput');
+    const sendBtn = document.getElementById('aiSendBtn');
+    const message = input.value.trim();
+    if (!message) return;
+
+    input.value = '';
+    input.disabled = true;
+    sendBtn.disabled = true;
+
+    // Show user message
+    appendAIMessage('user', escapeHtml(message));
+
+    // Show thinking indicator
+    const thinkingRow = appendAIMessage('bot', 'Thinking...', 'ai-msg-thinking');
+
+    try {
+        const response = await fetch('/ai_assistant.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: message,
+                car: carData,
+                available_parts: AI_PARTS || [],
+                current_build: buildParts,
+            }),
+        });
+
+        const data = await response.json();
+        thinkingRow.remove();
+
+        if (data.error) {
+            appendAIMessage('bot', '<span style="color:#c05050;">' + escapeHtml(data.error) + '</span>');
+        } else {
+            const actions = data.actions || [];
+            const applied = applyAIActions(actions);
+
+            let html = escapeHtml(data.message);
+
+            // Show action tags
+            if (applied.added.length > 0 || applied.removed.length > 0) {
+                html += '<div class="ai-actions-applied">';
+                applied.added.forEach(name => {
+                    html += '<span class="ai-action-tag added">+ ' + escapeHtml(name) + '</span>';
+                });
+                applied.removed.forEach(name => {
+                    html += '<span class="ai-action-tag removed">− ' + escapeHtml(name) + '</span>';
+                });
+                html += '</div>';
+            }
+
+            appendAIMessage('bot', html);
+        }
+    } catch (e) {
+        thinkingRow.remove();
+        appendAIMessage('bot', '<span style="color:#c05050;">Something went wrong. Please try again.</span>');
+    } finally {
+        input.disabled = false;
+        sendBtn.disabled = false;
+        input.focus();
+    }
+}
+
+function applyAIActions(actions) {
+    const result = { added: [], removed: [] };
+    if (!actions || !actions.length) return result;
+
+    actions.forEach(action => {
+        const partId = String(action.part_id);
+        const part   = AI_PARTS_MAP[partId];
+        if (!part) return;
+
+        if (action.action === 'remove') {
+            const idx = buildParts.findIndex(p => String(p.part_id) === partId);
+            if (idx !== -1) {
+                result.removed.push(buildParts[idx].name);
+                buildParts.splice(idx, 1);
+            }
+        } else if (action.action === 'add') {
+            // Skip if already in build
+            if (buildParts.some(p => String(p.part_id) === partId)) return;
+
+            const slotMap = { 'Exhaust': 'exhaust', 'Intake': 'intake', 'Suspension': 'suspension', 'Wheels': 'wheels' };
+            const isCompatible = checkPartCompatibility(part.engine, part.chassis, part.year_start, part.year_end);
+
+            // Build a proper link via redirect
+            const link = part.link
+                ? (part.link.match(/^https?:\/\//) ? part.link : 'https://' + part.link)
+                : '';
+
+            buildParts.push({
+                part_id:      partId,
+                name:         part.name,
+                price:        part.price,
+                link:         link,
+                position:     slotMap[part.category] || 'general',
+                category:     part.category,
+                isCompatible: isCompatible,
+            });
+            result.added.push(part.name);
+        }
+    });
+
+    if (result.added.length > 0 || result.removed.length > 0) {
+        updateBuildDisplay();
+        filterParts();
+    }
+
+    return result;
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 </script>
 
