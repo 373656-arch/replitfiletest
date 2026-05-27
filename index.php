@@ -540,20 +540,14 @@ renderHeader();
                         <!-- AI Assistant Floating Button & Panel -->
         <div id="aiAssistantWrap">
             <button id="aiAssistantToggle" onclick="toggleAIPanel()" title="AI Build Assistant">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a1.75 1.75 0 0 1-1.267 1.679l-.323.093A2.31 2.31 0 0 1 10 11.584V12H6v-.416a2.31 2.31 0 0 1-1.41-1.093l-.323-.093A1.75 1.75 0 0 1 3 9.219zm4.247 2.024.062.14a.5.5 0 0 0 .461.308h.46a.5.5 0 0 0 .461-.308l.062-.14A1 1 0 0 1 9.6 9.988l.2-.3a.5.5 0 0 0 .083-.276V8.52a25 25 0 0 0-3.766 0v.892a.5.5 0 0 0 .083.276l.2.3a1 1 0 0 1 .847.566"/>
-                    <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8"/>
-                </svg>
+                <img src="https://assets.streamlinehq.com/image/private/w_240,h_240,ar_1/f_auto/v1/icons/spark/ai-sparkles-92cda.png?_a=DATAiZAAZAA0" width="22" height="22" alt="AI Assistant" style="display:block;">
                 <span>AI Assistant</span>
             </button>
 
             <div id="aiAssistantPanel" class="ai-panel" style="display:none;">
                 <div class="ai-panel-header">
                     <div class="ai-panel-title">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a1.75 1.75 0 0 1-1.267 1.679l-.323.093A2.31 2.31 0 0 1 10 11.584V12H6v-.416a2.31 2.31 0 0 1-1.41-1.093l-.323-.093A1.75 1.75 0 0 1 3 9.219zm4.247 2.024.062.14a.5.5 0 0 0 .461.308h.46a.5.5 0 0 0 .461-.308l.062-.14A1 1 0 0 1 9.6 9.988l.2-.3a.5.5 0 0 0 .083-.276V8.52a25 25 0 0 0-3.766 0v.892a.5.5 0 0 0 .083.276l.2.3a1 1 0 0 1 .847.566"/>
-                            <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8"/>
-                        </svg>
+                        <img src="https://assets.streamlinehq.com/image/private/w_240,h_240,ar_1/f_auto/v1/icons/spark/ai-sparkles-92cda.png?_a=DATAiZAAZAA0" width="16" height="16" alt="AI Assistant">
                         AI Build Assistant
                     </div>
                     <button class="ai-panel-close" onclick="toggleAIPanel()">✕</button>
