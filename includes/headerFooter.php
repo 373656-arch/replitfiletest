@@ -304,7 +304,7 @@ function renderHeader() {
         </div>
         <header>
             <a href="/index.php" class="logo">
-                modmycar<span class="logo-dot"></span>
+                modmycar
             </a>
             <nav>
                 <?php if ($currentUser): ?>
