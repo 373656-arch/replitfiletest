@@ -643,7 +643,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // 1. Handling Likes & Saves
                 if (action === 'like_build' || action === 'save_build') {
-                    submitBtn.textContent = data.text; 
+                    submitBtn.textContent = data.text;
+                    if (typeof pollNotifications === 'function') pollNotifications();
                 } 
 
                 // 2. Handling Comment Deletions
@@ -654,7 +655,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // 3. Handling New Comments / Replies
                 else if (action === 'add_comment') {
-                    form.querySelector('textarea').value = ''; // Clear text box
+                    form.querySelector('textarea').value = '';
+                    if (typeof pollNotifications === 'function') pollNotifications();
 
                     if (data.parent_id) {
                         // It's a reply! Add it to the replies container

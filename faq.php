@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($ans_owner != $user_id) {
                 $u_data = getUserData($user_id);
-                createNotification($ans_owner, 'like', $u_data['username'] . " upvoted your answer.", "/faq.php", $user_id);
+                createNotification($ans_owner, 'like', $u_data['username'] . " upvoted your answer.", "/faq.php#answer-" . $answer_id, $user_id);
             }
 
             echo json_encode(['success' => true, 'new_count' => $new_count]);
@@ -89,6 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $conn->prepare("INSERT INTO qa_replies (answer_id, user_id, content) VALUES (?, ?, ?)");
         $stmt->bind_param("iis", $answer_id, $_SESSION['user_id'], $content);
         if ($stmt->execute()) {
+            $new_reply_id = $conn->insert_id;
             $owner_stmt = $conn->prepare("SELECT user_id FROM qa_answers WHERE id = ?");
             $owner_stmt->bind_param("i", $answer_id);
             $owner_stmt->execute();
@@ -96,10 +97,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($ans_owner && $ans_owner != $_SESSION['user_id']) {
                 $u_data = getUserData($_SESSION['user_id']);
                 $preview = mb_strlen($content) > 60 ? mb_substr($content, 0, 60) . '…' : $content;
-                createNotification($ans_owner, 'reply', $u_data['username'] . ' replied to your answer: "' . $preview . '"', "/faq.php", $_SESSION['user_id']);
+                createNotification($ans_owner, 'reply', $u_data['username'] . ' replied to your answer: "' . $preview . '"', "/faq.php#faq-reply-" . $new_reply_id, $_SESSION['user_id']);
             }
             $u = getUserData($_SESSION['user_id']);
-            echo json_encode(['success' => true, 'username' => $u['username'], 'content' => htmlspecialchars($content), 'date' => date('M j, Y')]);
+            echo json_encode(['success' => true, 'reply_id' => $new_reply_id, 'username' => $u['username'], 'content' => htmlspecialchars($content), 'date' => date('M j, Y')]);
         } else {
             echo json_encode(['success' => false, 'error' => 'Failed to post reply.']);
         }
@@ -144,6 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $conn->prepare("INSERT INTO qa_answers (question_id, user_id, content) VALUES (?, ?, ?)");
                     $stmt->bind_param("iis", $question_id, $_SESSION['user_id'], $content);
                     if ($stmt->execute()) {
+                        $new_answer_id = $conn->insert_id;
                         $success_msg = "Answer posted!";
                         $owner_stmt = $conn->prepare("SELECT user_id FROM qa_questions WHERE id = ?");
                         $owner_stmt->bind_param("i", $question_id);
@@ -151,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $q_owner = $owner_stmt->get_result()->fetch_assoc()['user_id'] ?? null;
                         if ($q_owner && $q_owner != $_SESSION['user_id']) {
                             $u_data = getUserData($_SESSION['user_id']);
-                            createNotification($q_owner, 'comment', $u_data['username'] . " answered your question.", "/faq.php", $_SESSION['user_id']);
+                            createNotification($q_owner, 'comment', $u_data['username'] . ' answered your question: "' . (mb_strlen($content) > 60 ? mb_substr($content, 0, 60) . '…' : $content) . '"', "/faq.php#answer-" . $new_answer_id, $_SESSION['user_id']);
                         }
                     }
                 }
@@ -414,7 +416,7 @@ details p {
                                         if ($replies->num_rows > 0): ?>
                                             <div class="faq-replies" id="replies-<?php echo $ans['id']; ?>" style="margin-top: 0.75rem; padding-left: 1rem; border-left: 2px solid var(--border-color);">
                                                 <?php while ($rep = $replies->fetch_assoc()): ?>
-                                                    <div class="faq-reply" style="font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--text-secondary);">
+                                                    <div class="faq-reply" id="faq-reply-<?php echo (int)$rep['id']; ?>" style="font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--text-secondary);">
                                                         <strong style="color: var(--accent-2);"><?php echo htmlspecialchars($rep['username']); ?></strong>:
                                                         <?php echo nl2br(htmlspecialchars($rep['content'])); ?>
                                                         <span style="font-size: 0.75rem; color: var(--text-secondary); margin-left: 0.4rem;"><?php echo date('M j', strtotime($rep['date_posted'])); ?></span>
@@ -516,6 +518,7 @@ function upvoteAnswer(answerId, btnElement) {
                 countSpan.textContent = data.new_count;
                 btnElement.style.color = 'var(--text-primary)';
                 btnElement.disabled = true;
+                if (typeof pollNotifications === 'function') pollNotifications();
             } else {
                 alert(data.error);
             }
@@ -553,12 +556,14 @@ function submitFaqReply(answerId) {
                     repliesBox.style.display = 'block';
                     const div = document.createElement('div');
                     div.className = 'faq-reply';
+                    if (data.reply_id) div.id = 'faq-reply-' + data.reply_id;
                     div.style.cssText = 'font-size: 0.85rem; margin-bottom: 0.5rem; color: var(--text-secondary);';
                     div.innerHTML = '<strong style="color: var(--accent-2);">' + data.username + '</strong>: ' + data.content + ' <span style="font-size: 0.75rem; color: var(--text-secondary); margin-left: 0.4rem;">' + data.date + '</span>';
                     repliesBox.appendChild(div);
                 }
                 input.value = '';
                 document.getElementById('faq-reply-form-' + answerId).style.display = 'none';
+                if (typeof pollNotifications === 'function') pollNotifications();
             } else {
                 alert(data.error || 'Failed to post reply.');
             }
@@ -570,6 +575,27 @@ let timeout = null;
 const titleInput = document.getElementById('question_title');
 const warningBox = document.getElementById('duplicate-warning');
 const similarList = document.getElementById('similar-list');
+
+// --- Hash-scroll: jump to and highlight a specific answer or reply ---
+function scrollToFaqTarget() {
+    const hash = window.location.hash;
+    if (!hash) return;
+    const el = document.getElementById(hash.substring(1));
+    if (!el) return;
+
+    if (el.classList.contains('faq-reply')) {
+        const container = el.closest('[id^="replies-"]');
+        if (container) container.style.display = 'block';
+    }
+
+    setTimeout(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.transition = 'background-color 0.4s ease';
+        el.style.backgroundColor = 'rgba(200, 136, 58, 0.35)';
+        setTimeout(() => { el.style.backgroundColor = ''; }, 2000);
+    }, 350);
+}
+window.addEventListener('load', scrollToFaqTarget);
 
 if (titleInput) {
     titleInput.addEventListener('input', function() {

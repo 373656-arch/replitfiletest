@@ -185,6 +185,14 @@ function renderHeader() {
                 border-left: 3px solid var(--accent-1, #c8883a) !important;
             }
 
+            @keyframes notifNewFlash {
+                0%   { background-color: rgba(200, 136, 58, 0.45); }
+                100% { background-color: transparent; }
+            }
+            .notif-item.notif-new-flash {
+                animation: notifNewFlash 1.2s ease-out forwards !important;
+            }
+
             .notif-item.admin-notif {
                 background: rgba(239, 68, 68, 0.1) !important;
                 border-left: 3px solid #ef4444 !important;
@@ -507,11 +515,25 @@ function renderFooter() {
                 }
             }
 
-            // Toggle notification panel
+            // Toggle notification panel — mark all as read the moment the panel opens
             if (notifToggle && notifPanel) {
                 notifToggle.addEventListener('click', function(e) {
                     e.stopPropagation();
+                    const opening = !notifPanel.classList.contains('show');
                     notifPanel.classList.toggle('show');
+
+                    if (opening) {
+                        // Clear badge immediately and record that user has now seen everything
+                        if (notifBadge) notifBadge.style.display = 'none';
+                        lastReadId = lastKnownId; // future polls won't re-badge old items
+                        document.querySelectorAll('.notif-item.unread').forEach(item => {
+                            item.classList.remove('unread');
+                        });
+                        // Mark all read on server
+                        const fd = new FormData();
+                        fd.append('ajax_mark_notifications_read', '1');
+                        fetch('/config.php', { method: 'POST', body: fd }).catch(() => {});
+                    }
                 });
 
                 document.addEventListener('click', function(e) {
@@ -571,50 +593,67 @@ function renderFooter() {
                 return div;
             }
 
-            // Real-time polling: check for new notifications every 30s
+            // lastKnownId  = highest notification ID already in the DOM (server-rendered)
+            // lastReadId   = highest ID the user has "seen" (updated when panel is opened)
             let lastKnownId = <?php
                 $first = !empty($recent_notifications) ? (int)$recent_notifications[0]['id'] : 0;
                 echo $first;
             ?>;
+            let lastReadId = lastKnownId;
 
             function pollNotifications() {
                 fetch('/config.php?ajax_poll_notifications=1&since_id=' + lastKnownId)
                     .then(r => r.json())
                     .then(data => {
                         const newOnes = data.new_notifications || [];
+                        const body    = document.querySelector('.notif-body');
+                        let addedCount = 0;
 
-                        // Prepend new items to panel
                         if (newOnes.length > 0) {
-                            const body = document.querySelector('.notif-body');
                             const empty = body ? body.querySelector('.notif-empty') : null;
                             if (empty) empty.remove();
+
                             newOnes.forEach(n => {
+                                // Skip duplicates already in the DOM
+                                if (document.querySelector('.notif-item[data-notif-id="' + n.id + '"]')) {
+                                    if (n.id > lastKnownId) lastKnownId = n.id;
+                                    return;
+                                }
                                 const el = buildNotifEl(n);
+                                // Flash-highlight only truly new arrivals
+                                el.classList.add('notif-new-flash');
+                                setTimeout(() => el.classList.remove('notif-new-flash'), 1200);
                                 if (body) body.insertBefore(el, body.firstChild);
                                 if (n.id > lastKnownId) lastKnownId = n.id;
+                                addedCount++;
                             });
                             applyLocalTimes();
                         }
 
-                        // Update badge
-                        const count = data.count || 0;
-                        if (count > 0) {
-                            if (!notifBadge || notifBadge.style.display === 'none') {
+                        // Only show badge for notifications newer than what the user last read
+                        if (addedCount > 0) {
+                            const unreadNew = document.querySelectorAll(
+                                '.notif-item[data-notif-id]'
+                            );
+                            let newUnread = 0;
+                            unreadNew.forEach(item => {
+                                if (parseInt(item.dataset.notifId) > lastReadId) newUnread++;
+                            });
+                            if (newUnread > 0) {
                                 if (!notifBadge) {
                                     notifBadge = document.createElement('span');
                                     notifBadge.id        = 'notifBadge';
                                     notifBadge.className = 'notif-badge';
                                     if (notifToggle) notifToggle.appendChild(notifBadge);
-                                } else {
-                                    notifBadge.style.display = 'flex';
                                 }
+                                notifBadge.style.display = 'flex';
+                                notifBadge.textContent   = newUnread;
                             }
-                            notifBadge.textContent = count;
                         }
                     }).catch(() => {});
             }
 
-            setInterval(pollNotifications, 30000);
+            setInterval(pollNotifications, 5000);
         </script>
     </body>
     </html>
