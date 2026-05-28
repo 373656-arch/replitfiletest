@@ -58,6 +58,7 @@ if (!empty($_GET['share_build'])) {
 
 $prefill_parts_json = $prefill_build ? json_encode($prefill_build['parts'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) : 'null';
 $prefill_title = $prefill_build['build_title'] ?? '';
+$edit_build_id = (!empty($prefill_build['is_edit']) && !empty($prefill_build['build_id'])) ? (int)$prefill_build['build_id'] : 0;
 
 $cars = $conn->query("SELECT * FROM cars ORDER BY brand, model, year");
 // Only read GET/session car_id if prefill hasn't already set one
@@ -130,39 +131,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
     $is_shared = isset($_POST['share_community']) ? 1 : 0;
     $build_data = json_decode($_POST['build_data'] ?? '[]', true);
     $estimated_hp = isset($_POST['estimated_hp']) && is_numeric($_POST['estimated_hp']) ? (int)$_POST['estimated_hp'] : null;
+    $edit_id = (int)($_POST['edit_build_id'] ?? 0);
 
-    $stmt = $conn->prepare("INSERT INTO builds (user_id, car_id, build_title, total_price, is_community_shared, estimated_hp) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("iisdii", $_SESSION['user_id'], $selected_car_id, $build_title, $total_price, $is_shared, $estimated_hp);
-    if ($stmt->execute()) {
-        $build_id = $conn->insert_id;
-        foreach ($build_data as $item) {
-            $stmt2 = $conn->prepare("INSERT INTO build_parts (build_id, part_id, position_data) VALUES (?, ?, ?)");
-            $stmt2->bind_param("iis", $build_id, $item['part_id'], $item['position']);
-            $stmt2->execute();
-        }
-
-        // Handle optional image upload
-        if (!empty($_FILES['build_image']['name']) && $_FILES['build_image']['error'] === UPLOAD_ERR_OK) {
-            $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            $mime = finfo_file($finfo, $_FILES['build_image']['tmp_name']);
-            finfo_close($finfo);
-            if (in_array($mime, $allowed_types)) {
-                $ext = pathinfo($_FILES['build_image']['name'], PATHINFO_EXTENSION);
-                $filename = 'build_' . $build_id . '_' . time() . '.' . strtolower($ext);
-                $dest = __DIR__ . '/uploads/' . $filename;
-                if (move_uploaded_file($_FILES['build_image']['tmp_name'], $dest)) {
-                    $img_path = '/uploads/' . $filename;
-                    $upd = $conn->prepare("UPDATE builds SET featured_image = ? WHERE build_id = ?");
-                    $upd->bind_param("si", $img_path, $build_id);
-                    $upd->execute();
+    if ($edit_id > 0) {
+        // UPDATE existing build — verify ownership first
+        $own = $conn->prepare("SELECT build_id FROM builds WHERE build_id = ? AND user_id = ?");
+        $own->bind_param("ii", $edit_id, $_SESSION['user_id']);
+        $own->execute();
+        if ($own->get_result()->num_rows === 1) {
+            $stmt = $conn->prepare("UPDATE builds SET build_title=?, total_price=?, is_community_shared=?, estimated_hp=? WHERE build_id=? AND user_id=?");
+            $stmt->bind_param("sdiiii", $build_title, $total_price, $is_shared, $estimated_hp, $edit_id, $_SESSION['user_id']);
+            if ($stmt->execute()) {
+                $build_id = $edit_id;
+                // Replace parts
+                $del = $conn->prepare("DELETE FROM build_parts WHERE build_id = ?");
+                $del->bind_param("i", $build_id);
+                $del->execute();
+                foreach ($build_data as $item) {
+                    $stmt2 = $conn->prepare("INSERT INTO build_parts (build_id, part_id, position_data) VALUES (?, ?, ?)");
+                    $stmt2->bind_param("iis", $build_id, $item['part_id'], $item['position']);
+                    $stmt2->execute();
                 }
+                // Handle optional image upload
+                if (!empty($_FILES['build_image']['name']) && $_FILES['build_image']['error'] === UPLOAD_ERR_OK) {
+                    $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mime = finfo_file($finfo, $_FILES['build_image']['tmp_name']);
+                    finfo_close($finfo);
+                    if (in_array($mime, $allowed_types)) {
+                        $ext = pathinfo($_FILES['build_image']['name'], PATHINFO_EXTENSION);
+                        $filename = 'build_' . $build_id . '_' . time() . '.' . strtolower($ext);
+                        $dest = __DIR__ . '/uploads/' . $filename;
+                        if (move_uploaded_file($_FILES['build_image']['tmp_name'], $dest)) {
+                            $img_path = '/uploads/' . $filename;
+                            $upd = $conn->prepare("UPDATE builds SET featured_image = ? WHERE build_id = ?");
+                            $upd->bind_param("si", $img_path, $build_id);
+                            $upd->execute();
+                        }
+                    }
+                }
+                $_SESSION['build_saved_success'] = true;
+                header('Location: /user/profile.php');
+                exit;
             }
         }
-
-        $_SESSION['build_saved_success'] = true;
-        header('Location: /user/profile.php');
-        exit;
+    } else {
+        // INSERT new build
+        $stmt = $conn->prepare("INSERT INTO builds (user_id, car_id, build_title, total_price, is_community_shared, estimated_hp) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("iisdii", $_SESSION['user_id'], $selected_car_id, $build_title, $total_price, $is_shared, $estimated_hp);
+        if ($stmt->execute()) {
+            $build_id = $conn->insert_id;
+            foreach ($build_data as $item) {
+                $stmt2 = $conn->prepare("INSERT INTO build_parts (build_id, part_id, position_data) VALUES (?, ?, ?)");
+                $stmt2->bind_param("iis", $build_id, $item['part_id'], $item['position']);
+                $stmt2->execute();
+            }
+            // Handle optional image upload
+            if (!empty($_FILES['build_image']['name']) && $_FILES['build_image']['error'] === UPLOAD_ERR_OK) {
+                $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mime = finfo_file($finfo, $_FILES['build_image']['tmp_name']);
+                finfo_close($finfo);
+                if (in_array($mime, $allowed_types)) {
+                    $ext = pathinfo($_FILES['build_image']['name'], PATHINFO_EXTENSION);
+                    $filename = 'build_' . $build_id . '_' . time() . '.' . strtolower($ext);
+                    $dest = __DIR__ . '/uploads/' . $filename;
+                    if (move_uploaded_file($_FILES['build_image']['tmp_name'], $dest)) {
+                        $img_path = '/uploads/' . $filename;
+                        $upd = $conn->prepare("UPDATE builds SET featured_image = ? WHERE build_id = ?");
+                        $upd->bind_param("si", $img_path, $build_id);
+                        $upd->execute();
+                    }
+                }
+            }
+            $_SESSION['build_saved_success'] = true;
+            header('Location: /user/profile.php');
+            exit;
+        }
     }
 }
 
@@ -597,6 +642,7 @@ renderHeader();
             <input type="hidden" name="total_price" id="saveTotalPrice">
             <input type="hidden" name="build_data" id="saveBuildData">
             <input type="hidden" name="estimated_hp" id="saveEstimatedHP">
+            <input type="hidden" name="edit_build_id" value="<?= $edit_build_id; ?>">
             <button type="submit" name="save_build" class="btn">Save Build</button>
         </form>
     </div>
