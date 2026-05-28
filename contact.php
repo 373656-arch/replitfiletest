@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_contact'])) {
         $stmt->bind_param("sssss", $name, $email, $target_admin, $message, $current_time);
 
         if ($stmt->execute()) {
+            $new_msg_id = $conn->insert_id;
             $admin_lookup = $conn->prepare("SELECT uid FROM users WHERE email = ?");
             $admin_lookup->bind_param("s", $target_admin);
             $admin_lookup->execute();
@@ -34,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_contact'])) {
                 $msg_preview = mb_strlen($message) > 60 ? mb_substr($message, 0, 60) . '…' : $message;
                 createNotification($admin_row['uid'], 'admin_contact',
                     'New message from ' . $name . ': "' . $msg_preview . '"',
-                    '/admin.php?section=messages',
-                    $_SESSION['user_id']);
+                    '/admin.php?section=messages&msg_id=' . $new_msg_id,
+                    $_SESSION['user_id'] ?? null);
             }
             header("Location: contact.php?success=1");
             exit;

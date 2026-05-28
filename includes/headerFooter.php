@@ -507,11 +507,24 @@ function renderFooter() {
                 }
             }
 
-            // Toggle notification panel
+            // Toggle notification panel — mark all as read the moment the panel opens
             if (notifToggle && notifPanel) {
                 notifToggle.addEventListener('click', function(e) {
                     e.stopPropagation();
+                    const opening = !notifPanel.classList.contains('show');
                     notifPanel.classList.toggle('show');
+
+                    if (opening) {
+                        // Immediately clear badge and unread styles
+                        if (notifBadge) notifBadge.style.display = 'none';
+                        document.querySelectorAll('.notif-item.unread').forEach(item => {
+                            item.classList.remove('unread');
+                        });
+                        // Mark all read on server
+                        const fd = new FormData();
+                        fd.append('ajax_mark_notifications_read', '1');
+                        fetch('/config.php', { method: 'POST', body: fd }).catch(() => {});
+                    }
                 });
 
                 document.addEventListener('click', function(e) {
@@ -614,7 +627,7 @@ function renderFooter() {
                     }).catch(() => {});
             }
 
-            setInterval(pollNotifications, 30000);
+            setInterval(pollNotifications, 5000);
         </script>
     </body>
     </html>

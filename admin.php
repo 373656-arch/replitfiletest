@@ -511,7 +511,7 @@ renderHeader();
                         $cardClass = $isForMe ? "message-card highlight-msg" : "message-card";
                         ?>
 
-                        <div class="<?= $cardClass ?>">
+                        <div class="<?= $cardClass ?>" id="msg-card-<?= $msg['message_id'] ?>">
                             <div class="message-header">
                                 <div>
                                     <h4 style="margin: 0; color: #fff;">From: <?= htmlspecialchars($msg['sender_name']) ?> <span style="font-weight: normal; color: #aaa;">(<?= htmlspecialchars($msg['sender_email']) ?>)</span></h4>
@@ -573,8 +573,8 @@ renderHeader();
             </div>
 
             <script>
-                // Hide Expand button if message isn't long enough to overflow
                 document.addEventListener("DOMContentLoaded", function() {
+                    // Hide Expand button if message isn't long enough to overflow
                     const messages = document.querySelectorAll('.msg-body-text');
                     messages.forEach(msg => {
                         const id = msg.id.split('-')[2];
@@ -583,6 +583,28 @@ renderHeader();
                             btn.style.display = 'inline-block';
                         }
                     });
+
+                    // Auto-scroll + highlight a specific message if ?msg_id=X is set
+                    const params = new URLSearchParams(window.location.search);
+                    const msgId  = params.get('msg_id');
+                    if (msgId) {
+                        const card = document.getElementById('msg-card-' + msgId);
+                        if (card) {
+                            // Expand its body if it's collapsed
+                            const textEl = card.querySelector('.msg-body-text');
+                            if (textEl && textEl.classList.contains('collapsed')) {
+                                textEl.classList.remove('collapsed');
+                                const btnEl = card.querySelector('.toggle-msg-btn');
+                                if (btnEl) btnEl.textContent = 'Shrink';
+                            }
+                            setTimeout(() => {
+                                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                card.style.transition = 'box-shadow 0.4s ease, outline 0.4s ease';
+                                card.style.outline    = '2px solid #ef4444';
+                                setTimeout(() => { card.style.outline = ''; }, 2500);
+                            }, 300);
+                        }
+                    }
                 });
 
                 function toggleMessage(id) {

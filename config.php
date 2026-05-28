@@ -104,6 +104,13 @@ function getSimilarBuilds($car_id, $limit = 5) {
 
 function createNotification($user_id, $type, $message, $link = null, $actor_id = null) {
     global $conn;
+    // Deduplicate: skip if same actor already sent this type of notification to this user in the last 60s
+    if ($actor_id) {
+        $dup = $conn->prepare("SELECT id FROM notifications WHERE user_id=? AND actor_id=? AND type=? AND created_at > DATE_SUB(NOW(), INTERVAL 60 SECOND)");
+        $dup->bind_param("iis", $user_id, $actor_id, $type);
+        $dup->execute();
+        if ($dup->get_result()->num_rows > 0) return false;
+    }
     $stmt = $conn->prepare("INSERT INTO notifications (user_id, actor_id, type, message, link) VALUES (?, ?, ?, ?, ?)");
     $stmt->bind_param("iisss", $user_id, $actor_id, $type, $message, $link);
     return $stmt->execute();
