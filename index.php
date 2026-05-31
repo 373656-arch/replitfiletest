@@ -547,9 +547,13 @@ renderHeader();
                              draggable="true"
                              ondragstart="drag(event)">
 
-                            <?php if (!empty($part['image'])): ?>
-                                <img src="<?= htmlspecialchars($part['image']); ?>">
-                            <?php endif; ?>
+                            <?php
+                                $placeholder = 'https://www.mashandgrape.com/cdn/shop/products/default_f364e153-e5a1-46e9-b66a-2cceb3f5a4ef_1024x1024.png?v=1643300595';
+                                $img_src = (!empty($part['image']) && $part['image'] !== $placeholder)
+                                    ? htmlspecialchars($part['image'])
+                                    : '/assets/placeholder-part.svg';
+                            ?>
+                            <img src="<?= $img_src; ?>" onerror="this.src='/assets/placeholder-part.svg'">
 
                             <h4><?= htmlspecialchars($part['name']); ?></h4>
                             <p class="price">$<?= number_format($part['price'], 2); ?></p>
