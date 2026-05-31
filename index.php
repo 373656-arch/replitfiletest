@@ -331,6 +331,7 @@ renderHeader();
 }
 .ai-action-tag.added   { background: rgba(100,200,100,0.15); color: #5c9e5c; border: 1px solid #5c9e5c44; }
 .ai-action-tag.removed { background: rgba(200,100,100,0.15); color: #c05050; border: 1px solid #c0505044; }
+.ai-action-tag.skipped { background: rgba(200,150,50,0.15); color: #c8922a; border: 1px solid #c8922a44; }
 .ai-input-row {
     display: flex;
     gap: 8px;
@@ -1128,13 +1129,16 @@ async function sendAIMessage() {
             let html = escapeHtml(data.message);
 
             // Show action tags
-            if (applied.added.length > 0 || applied.removed.length > 0) {
+            if (applied.added.length > 0 || applied.removed.length > 0 || applied.skipped.length > 0) {
                 html += '<div class="ai-actions-applied">';
                 applied.added.forEach(name => {
                     html += '<span class="ai-action-tag added">+ ' + escapeHtml(name) + '</span>';
                 });
                 applied.removed.forEach(name => {
                     html += '<span class="ai-action-tag removed">− ' + escapeHtml(name) + '</span>';
+                });
+                applied.skipped.forEach(name => {
+                    html += '<span class="ai-action-tag skipped">✕ ' + escapeHtml(name) + ' (incompatible)</span>';
                 });
                 html += '</div>';
             }
@@ -1152,7 +1156,7 @@ async function sendAIMessage() {
 }
 
 function applyAIActions(actions) {
-    const result = { added: [], removed: [] };
+    const result = { added: [], removed: [], skipped: [] };
     if (!actions || !actions.length) return result;
 
     actions.forEach(action => {
@@ -1172,6 +1176,12 @@ function applyAIActions(actions) {
 
             const slotMap = { 'Exhaust': 'exhaust', 'Intake': 'intake', 'Suspension': 'suspension', 'Wheels': 'wheels' };
             const isCompatible = checkPartCompatibility(part.engine, part.chassis, part.year_start, part.year_end);
+
+            // Block incompatible parts from being added
+            if (!isCompatible) {
+                result.skipped.push(part.name);
+                return;
+            }
 
             // Build a proper link via redirect
             const link = part.link
