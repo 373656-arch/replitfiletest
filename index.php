@@ -897,7 +897,7 @@ function filterParts() {
         }
 
         // Final Visibility Decision
-        part.style.display = (matchesSearch && matchesCategory && matchesCompat) ? 'block' : 'none';
+        part.style.display = (matchesSearch && matchesCategory && matchesCompat) ? 'flex' : 'none';
     });
 }
 
