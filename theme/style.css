@@ -500,6 +500,13 @@ input::placeholder, textarea::placeholder {
     opacity: 1;
 }
 
+.build-card-img--placeholder {
+    object-fit: contain;
+    background: #111;
+    padding: 12px 0;
+    opacity: 0.75;
+}
+
 .build-card-content {
     padding: 1.25rem;
     display: flex;

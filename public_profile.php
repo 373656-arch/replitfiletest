@@ -74,11 +74,7 @@ renderHeader();
             <div class="community-grid">
                 <?php while ($build = $user_builds->fetch_assoc()): ?>
                     <div class="build-card">
-                        <?php if ($build['featured_image']): ?>
-                            <img src="<?php echo htmlspecialchars($build['featured_image']); ?>" alt="Build">
-                        <?php else: ?>
-                            <div class="img-placeholder">No Image</div>
-                        <?php endif; ?>
+                        <img src="<?php echo !empty($build['featured_image']) ? htmlspecialchars($build['featured_image']) : '/assets/placeholder-build.svg'; ?>" alt="Build" class="build-card-img<?php echo empty($build['featured_image']) ? ' build-card-img--placeholder' : ''; ?>">
                         <div class="build-card-content">
                             <h3><?php echo htmlspecialchars($build['build_title']); ?></h3>
                             <p class="text-muted"><?php echo htmlspecialchars($build['car_name']); ?></p>

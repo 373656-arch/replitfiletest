@@ -422,11 +422,7 @@ renderHeader();
             <?php foreach ($community_highlights as $hl): ?>
             <a href="/community.php?build=<?= (int)$hl['build_id']; ?>" class="highlight-card">
                 <div class="highlight-card-img">
-                    <?php if (!empty($hl['featured_image'])): ?>
-                        <img src="<?= htmlspecialchars($hl['featured_image']); ?>" alt="Build">
-                    <?php else: ?>
-                        <span>No Image</span>
-                    <?php endif; ?>
+                    <img src="<?= !empty($hl['featured_image']) ? htmlspecialchars($hl['featured_image']) : '/assets/placeholder-build.svg'; ?>" alt="Build" class="<?= empty($hl['featured_image']) ? 'build-card-img--placeholder' : ''; ?>">
                 </div>
                 <div class="highlight-card-body">
                     <h4><?= htmlspecialchars($hl['build_title']); ?></h4>

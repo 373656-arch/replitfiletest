@@ -95,13 +95,7 @@ if ($show_confetti) {
             <div class="community-grid">
                 <?php while ($build = $my_builds_result->fetch_assoc()): ?>
                     <div class="build-card">
-                        <?php if ($build['featured_image']): ?>
-                            <img src="<?php echo htmlspecialchars($build['featured_image']); ?>" alt="Build">
-                        <?php else: ?>
-                            <div class="img-placeholder">
-                                <span>No Image</span>
-                            </div>
-                        <?php endif; ?>
+                        <img src="<?php echo !empty($build['featured_image']) ? htmlspecialchars($build['featured_image']) : '/assets/placeholder-build.svg'; ?>" alt="Build" class="build-card-img<?php echo empty($build['featured_image']) ? ' build-card-img--placeholder' : ''; ?>">
                         <div class="build-card-content">
                             <h3><?php echo htmlspecialchars($build['build_title']); ?></h3>
                             <p><?php echo htmlspecialchars($build['car_name']); ?></p>
@@ -135,13 +129,7 @@ if ($show_confetti) {
             <div class="community-grid">
                 <?php while ($build = $saved_builds_result->fetch_assoc()): ?>
                     <div class="build-card">
-                        <?php if ($build['featured_image']): ?>
-                            <img src="<?php echo htmlspecialchars($build['featured_image']); ?>" alt="Build">
-                        <?php else: ?>
-                            <div class="img-placeholder">
-                                <span>No Image</span>
-                            </div>
-                        <?php endif; ?>
+                        <img src="<?php echo !empty($build['featured_image']) ? htmlspecialchars($build['featured_image']) : '/assets/placeholder-build.svg'; ?>" alt="Build" class="build-card-img<?php echo empty($build['featured_image']) ? ' build-card-img--placeholder' : ''; ?>">
                         <div class="build-card-content">
                             <h3><?php echo htmlspecialchars($build['build_title']); ?></h3>
                             <p>by <?php echo htmlspecialchars($build['creator_name']); ?></p>

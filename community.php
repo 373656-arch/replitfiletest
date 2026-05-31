@@ -369,11 +369,7 @@ renderHeader();
                          data-likes="<?php echo (int)$build['likes_count']; ?>"
                          data-price="<?php echo (float)$build['total_price']; ?>"
                          data-date="<?php echo strtotime($build['date_created'] ?? 'now'); ?>">
-                        <?php if (!empty($build['featured_image'])): ?>
-                            <img src="<?php echo htmlspecialchars($build['featured_image']); ?>" alt="Build">
-                        <?php else: ?>
-                            <div class="img-placeholder">No Image</div>
-                        <?php endif; ?>
+                        <img src="<?php echo !empty($build['featured_image']) ? htmlspecialchars($build['featured_image']) : '/assets/placeholder-build.svg'; ?>" alt="Build" class="build-card-img<?php echo empty($build['featured_image']) ? ' build-card-img--placeholder' : ''; ?>">
                         <div class="build-card-content">
                             <h3><?php echo htmlspecialchars($build['build_title']); ?></h3>
                             <p class="text-muted fs-085">by <a href="/public_profile.php?username=<?php echo urlencode($build['creator_name']); ?>" class="creator-link"><?php echo htmlspecialchars($build['creator_name']); ?></a></p>
