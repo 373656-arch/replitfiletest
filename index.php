@@ -539,6 +539,7 @@ renderHeader();
                              data-category="<?= htmlspecialchars($part['category']); ?>"
                              data-name="<?= htmlspecialchars($part['name']); ?>"
                              data-price="<?= $part['price']; ?>"
+                             data-hp-gain="<?= (int)($part['hp_gain'] ?? 0); ?>"
                              data-engine="<?= htmlspecialchars($part['engine_code'] ?? ''); ?>"
                              data-chassis="<?= htmlspecialchars($part['chassis_code'] ?? ''); ?>"
                              data-year-start="<?= $part['year_start'] ?? 0; ?>"
@@ -728,6 +729,7 @@ function dragLeave(event) { event.currentTarget.classList.remove('drag-over'); }
             id: event.dataTransfer.getData("partId"),
             name: event.dataTransfer.getData("name"),
             price: parseFloat(event.dataTransfer.getData("price")),
+            hpGain: parseInt(event.dataTransfer.getData("hpGain") || "0"),
             link: event.dataTransfer.getData("link"),
             category: event.dataTransfer.getData("category"),
             engine: event.dataTransfer.getData("engine"),
@@ -750,7 +752,8 @@ function dragLeave(event) { event.currentTarget.classList.remove('drag-over'); }
         buildParts.push({ 
             part_id: d.id, 
             name: d.name, 
-            price: d.price, 
+            price: d.price,
+            hp_gain: d.hpGain || 0,
             link: d.link,
             position: slotMap[d.category] || 'general',
             category: d.category, // NEW: Save the category so we can check it later
@@ -795,6 +798,7 @@ function updateBuildDisplay() {
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                 <span>
                     <strong>${p.name}</strong> ($${p.price.toFixed(2)})
+                    ${(p.hp_gain && p.hp_gain > 0) ? `<span class="hp-pill">+${p.hp_gain} HP</span>` : ''}
                     ${!p.isCompatible ? '<span class="incompatible-badge">✕ Incompatible</span>' : ''}
                 </span>
                 <div style="display: flex; gap: 8px; align-items: center;">
@@ -1025,10 +1029,12 @@ function prepareBuildData() {
             let category = 'general'; // Default fallback
             let isCompatible = true;
 
+            let hpGain = 0;
             if (domPart) {
                 const d = domPart.dataset;
                 link = d.link || link;
                 category = d.category || category; // Grab category from DOM
+                hpGain = parseInt(d.hpGain || "0");
                 isCompatible = checkPartCompatibility(d.engine, d.chassis, parseInt(d.yearStart), parseInt(d.yearEnd));
             }
 
@@ -1036,6 +1042,7 @@ function prepareBuildData() {
                 part_id: String(prefillPart.part_id),
                 name: prefillPart.name,
                 price: prefillPart.price,
+                hp_gain: hpGain,
                 link: link,
                 position: prefillPart.position || 'general',
                 category: category, // Save category during prefill
@@ -1179,6 +1186,7 @@ function applyAIActions(actions) {
                 part_id:      partId,
                 name:         part.name,
                 price:        part.price,
+                hp_gain:      part.hp_gain || 0,
                 link:         link,
                 position:     slotMap[part.category] || 'general',
                 category:     part.category,

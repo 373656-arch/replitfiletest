@@ -1323,6 +1323,7 @@ footer {
 
 /* Status Styles */
 .incompatible-badge { color: #ff4d4d; font-size: 0.8rem; font-weight: bold; margin-left: 10px; }
+.hp-pill { display: inline-block; background: #1a7a3a; color: #fff; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-left: 8px; letter-spacing: 0.03em; vertical-align: middle; }
 .summary-warning { color: #ff4d4d; font-weight: bold; margin-top: 5px; display: none; }
 .build-item-row.is-incompatible { border-left: 3px solid #ff4d4d; background: rgba(255, 77, 77, 0.08); }
 
