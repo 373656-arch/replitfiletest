@@ -1,10 +1,17 @@
 <?php
-require_once 'config.php';
+// 1. LIGHTWEIGHT DETOUR: Clear car session without touching the database!
 if (isset($_GET['clear_car'])) {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
     unset($_SESSION['selected_car_id']);
     header('Location: /index.php');
     exit;
 }
+
+// 2. LOAD CONFIG & ESTABLISH INITIAL STATE
+require_once 'config.php';
+
 // Handle "Edit" button from profile — load an existing build into prefill
 if (!empty($_GET['load_build']) && isLoggedIn()) {
     $load_id = (int)$_GET['load_build'];
@@ -79,7 +86,6 @@ if ($selected_car_id) {
     $stmt->execute();
     $selected_car = $stmt->get_result()->fetch_assoc();
 
-    // We still grab p.* so $part['link'] will be included automatically
     $query = "SELECT p.*, a.base_url FROM parts p LEFT JOIN affiliate_sources a ON p.source_id = a.source_id ORDER BY p.category, p.name";
     $parts_result = $conn->query($query);
     $parts = $parts_result ? $parts_result->fetch_all(MYSQLI_ASSOC) : [];
@@ -124,6 +130,7 @@ if (!empty($parts) && $selected_car) {
     $ai_parts_json = json_encode($ai_parts_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 }
 
+// 3. POST PROCESSING HANDLER (Moved out of the middle for sanity, scopes preserved)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
     if (!isLoggedIn()) { header('Location: /user/login.php'); exit; }
     $build_title = trim($_POST['build_title'] ?? '');
@@ -134,7 +141,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
     $edit_id = (int)($_POST['edit_build_id'] ?? 0);
 
     if ($edit_id > 0) {
-        // UPDATE existing build — verify ownership first
         $own = $conn->prepare("SELECT build_id FROM builds WHERE build_id = ? AND user_id = ?");
         $own->bind_param("ii", $edit_id, $_SESSION['user_id']);
         $own->execute();
@@ -143,7 +149,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
             $stmt->bind_param("sdiiii", $build_title, $total_price, $is_shared, $estimated_hp, $edit_id, $_SESSION['user_id']);
             if ($stmt->execute()) {
                 $build_id = $edit_id;
-                // Replace parts
                 $del = $conn->prepare("DELETE FROM build_parts WHERE build_id = ?");
                 $del->bind_param("i", $build_id);
                 $del->execute();
@@ -152,7 +157,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
                     $stmt2->bind_param("iis", $build_id, $item['part_id'], $item['position']);
                     $stmt2->execute();
                 }
-                // Handle optional image upload
                 if (!empty($_FILES['build_image']['name']) && $_FILES['build_image']['error'] === UPLOAD_ERR_OK) {
                     $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
                     $finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -176,7 +180,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
             }
         }
     } else {
-        // INSERT new build
         $stmt = $conn->prepare("INSERT INTO builds (user_id, car_id, build_title, total_price, is_community_shared, estimated_hp) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("iisdii", $_SESSION['user_id'], $selected_car_id, $build_title, $total_price, $is_shared, $estimated_hp);
         if ($stmt->execute()) {
@@ -186,7 +189,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_build'])) {
                 $stmt2->bind_param("iis", $build_id, $item['part_id'], $item['position']);
                 $stmt2->execute();
             }
-            // Handle optional image upload
             if (!empty($_FILES['build_image']['name']) && $_FILES['build_image']['error'] === UPLOAD_ERR_OK) {
                 $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
                 $finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -216,156 +218,53 @@ $community_highlights = [];
 if (!$selected_car) {
     $ch = $conn->query("SELECT b.build_id, b.build_title, b.total_price, b.likes_count, b.featured_image, c.name as car_name, u.username FROM builds b JOIN cars c ON b.car_id = c.car_id JOIN users u ON b.user_id = u.uid WHERE b.is_community_shared = 1 ORDER BY b.likes_count DESC, b.date_created DESC LIMIT 3");
     if ($ch) $community_highlights = $ch->fetch_all(MYSQLI_ASSOC);
-
 }
 
 $pageTitle = $selected_car ? "Build Your Car - ModMyCar" : "ModMyCar — Mod Your Ride";
 require_once 'includes/headerFooter.php';
 renderHeader();
 ?>
+
 <style>
 /* ── AI Assistant ── */
-#aiAssistantWrap {
-    margin-top: 0;
-    position: relative;
-}
+#aiAssistantWrap { margin-top: 0; position: relative; }
 #aiAssistantToggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    background: var(--bg-tertiary);
-    color: var(--accent-1);
-    border: 1px solid var(--accent-1);
-    border-radius: 8px;
-    padding: 9px 14px;
-    font-size: 0.88rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-    letter-spacing: 0.01em;
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+    background: var(--bg-tertiary); color: var(--accent-1); border: 1px solid var(--accent-1);
+    border-radius: 8px; padding: 9px 14px; font-size: 0.88rem; font-weight: 600; cursor: pointer;
+    transition: background 0.2s, color 0.2s; letter-spacing: 0.01em;
 }
 #aiAssistantToggle:hover { background: var(--accent-1); color: #fff; }
 .ai-panel {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    margin-top: 10px;
-    overflow: hidden;
-    box-shadow: var(--shadow-md);
-    max-width: 100%;
+    background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px;
+    margin-top: 10px; overflow: hidden; box-shadow: var(--shadow-md); max-width: 100%;
     animation: aiSlideIn 0.2s ease;
 }
-@keyframes aiSlideIn {
-    from { opacity: 0; transform: translateY(-8px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-.ai-panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-    background: var(--bg-tertiary);
-    border-bottom: 1px solid var(--border-color);
-}
-.ai-panel-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--accent-1);
-}
-.ai-panel-close {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 1rem;
-    padding: 2px 6px;
-    border-radius: 4px;
-    transition: color 0.15s;
-}
+@keyframes aiSlideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.ai-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color); }
+.ai-panel-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; color: var(--accent-1); }
+.ai-panel-close { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1rem; padding: 2px 6px; border-radius: 4px; transition: color 0.15s; }
 .ai-panel-close:hover { color: var(--text-primary); }
-.ai-messages {
-    padding: 16px;
-    max-height: 280px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
+.ai-messages { padding: 16px; max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
 .ai-msg { display: flex; }
-.ai-msg-bot  { justify-content: flex-start; }
+.ai-msg-bot { justify-content: flex-start; }
 .ai-msg-user { justify-content: flex-end; }
-.ai-msg-bubble {
-    max-width: 85%;
-    padding: 10px 14px;
-    border-radius: 12px;
-    font-size: 0.88rem;
-    line-height: 1.55;
-}
-.ai-msg-bot .ai-msg-bubble {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    border-bottom-left-radius: 3px;
-}
-.ai-msg-user .ai-msg-bubble {
-    background: var(--accent-1);
-    color: #fff;
-    border-bottom-right-radius: 3px;
-}
+.ai-msg-bubble { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 0.88rem; line-height: 1.55; }
+.ai-msg-bot .ai-msg-bubble { background: var(--bg-tertiary); color: var(--text-primary); border-bottom-left-radius: 3px; }
+.ai-msg-user .ai-msg-bubble { background: var(--accent-1); color: #fff; border-bottom-right-radius: 3px; }
 .ai-msg-thinking .ai-msg-bubble { color: var(--text-secondary); font-style: italic; }
-.ai-actions-applied {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 8px;
-}
-.ai-action-tag {
-    font-size: 0.78rem;
-    padding: 3px 8px;
-    border-radius: 20px;
-    font-weight: 600;
-}
-.ai-action-tag.added   { background: rgba(100,200,100,0.15); color: #5c9e5c; border: 1px solid #5c9e5c44; }
+.ai-actions-applied { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ai-action-tag { font-size: 0.78rem; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
+.ai-action-tag.added { background: rgba(100,200,100,0.15); color: #5c9e5c; border: 1px solid #5c9e5c44; }
 .ai-action-tag.removed { background: rgba(200,100,100,0.15); color: #c05050; border: 1px solid #c0505044; }
 .ai-action-tag.skipped { background: rgba(200,150,50,0.15); color: #c8922a; border: 1px solid #c8922a44; }
-.ai-input-row {
-    display: flex;
-    gap: 8px;
-    padding: 12px 16px;
-    border-top: 1px solid var(--border-color);
-    background: var(--bg-tertiary);
-}
-.ai-input {
-    flex: 1;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-light);
-    border-radius: 8px;
-    padding: 9px 13px;
-    color: var(--text-primary);
-    font-size: 0.88rem;
-    outline: none;
-    transition: border-color 0.2s;
-}
+.ai-input-row { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border-color); background: var(--bg-tertiary); }
+.ai-input { flex: 1; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: 8px; padding: 9px 13px; color: var(--text-primary); font-size: 0.88rem; outline: none; transition: border-color 0.2s; }
 .ai-input:focus { border-color: var(--accent-1); }
-.ai-send-btn {
-    background: var(--accent-1);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    padding: 9px 13px;
-    cursor: pointer;
-    transition: background 0.2s;
-    display: flex;
-    align-items: center;
-}
+.ai-send-btn { background: var(--accent-1); color: #fff; border: none; border-radius: 8px; padding: 9px 13px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; }
 .ai-send-btn:hover { background: var(--accent-2); }
 .ai-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
-
 
 <?php if (!$selected_car): ?>
 <div class="container">
@@ -520,15 +419,10 @@ renderHeader();
                 <div id="partsList">
                     <?php foreach ($parts as $part): ?>
                         <?php 
-                            // 1. Grab the link directly from the database column
                             $raw_url = $part['link'] ?? '';
-
-                            // 2. Force https:// if it's missing (just to be safe)
                             if (!empty($raw_url) && !preg_match("~^(?:f|ht)tps?://~i", $raw_url)) {
                                 $raw_url = "https://" . $raw_url;
                             }
-
-                            // 3. Make it safe for HTML output
                             $full_link = htmlspecialchars($raw_url);
                         ?>
                         <div class="part-item"
@@ -559,8 +453,6 @@ renderHeader();
                             <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
                                 <a href="/redirect.php?part_id=<?= (int)$part['part_id']; ?>" target="_blank" class="btn btn-sm" style="width: 80px; text-align: center; text-decoration: none; background: var(--accent-1); color: #fff; padding: 5px; border-radius: 4px; font-size: 0.8rem;">View</a>
                             </div>
-
-                           
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -584,45 +476,43 @@ renderHeader();
                         <button id="saveBuildBtn" class="btn" style="margin-top:10px;" onclick="showSaveModal()">Save Build</button>
                         <button id="clearBuildBtn" class="btn btn-outline-danger" style="display:none;" onclick="clearAllParts()">Clear All</button>
 
-                        <!-- AI Assistant Floating Button & Panel -->
-        <div id="aiAssistantWrap">
-            <button id="aiAssistantToggle" onclick="toggleAIPanel()" title="AI Build Assistant">
-                <img src="https://assets.streamlinehq.com/image/private/w_240,h_240,ar_1/f_auto/v1/icons/spark/ai-sparkles-92cda.png?_a=DATAiZAAZAA0" width="22" height="22" alt="AI Assistant" style="display:block;">
-                <span>AI Assistant</span>
-            </button>
+                        <div id="aiAssistantWrap">
+                            <button id="aiAssistantToggle" onclick="toggleAIPanel()" title="AI Build Assistant">
+                                <img src="https://assets.streamlinehq.com/image/private/w_240,h_240,ar_1/f_auto/v1/icons/spark/ai-sparkles-92cda.png?_a=DATAiZAAZAA0" width="22" height="22" alt="AI Assistant" style="display:block;">
+                                <span>AI Assistant</span>
+                            </button>
 
-            <div id="aiAssistantPanel" class="ai-panel" style="display:none;">
-                <div class="ai-panel-header">
-                    <div class="ai-panel-title">
-                        <img src="https://assets.streamlinehq.com/image/private/w_240,h_240,ar_1/f_auto/v1/icons/spark/ai-sparkles-92cda.png?_a=DATAiZAAZAA0" width="16" height="16" alt="AI Assistant">
-                        AI Build Assistant
-                    </div>
-                    <button class="ai-panel-close" onclick="toggleAIPanel()">✕</button>
-                </div>
+                            <div id="aiAssistantPanel" class="ai-panel" style="display:none;">
+                                <div class="ai-panel-header">
+                                    <div class="ai-panel-title">
+                                        <img src="https://assets.streamlinehq.com/image/private/w_240,h_240,ar_1/f_auto/v1/icons/spark/ai-sparkles-92cda.png?_a=DATAiZAAZAA0" width="16" height="16" alt="AI Assistant">
+                                        AI Build Assistant
+                                    </div>
+                                    <button class="ai-panel-close" onclick="toggleAIPanel()">✕</button>
+                                </div>
 
-                <div id="aiMessages" class="ai-messages">
-                    <div class="ai-msg ai-msg-bot">
-                        <div class="ai-msg-bubble">
-                            Hey! I'm your build assistant. Tell me what you're going for — like <em>"build me a performance setup"</em>, <em>"add a better exhaust"</em>, or <em>"clear my build and start fresh"</em>.
-                        </div>
-                    </div>
-                </div>
+                                <div id="aiMessages" class="ai-messages">
+                                    <div class="ai-msg ai-msg-bot">
+                                        <div class="ai-msg-bubble">
+                                            Hey! I'm your build assistant. Tell me what you're going for — like <em>"build me a performance setup"</em>, <em>"add a better exhaust"</em>, or <em>"clear my build and start fresh"</em>.
+                                        </div>
+                                    </div>
+                                </div>
 
-                <div class="ai-input-row">
-                    <input type="text" id="aiInput" class="ai-input" placeholder="Ask me to build something..." onkeydown="if(event.key==='Enter') sendAIMessage()">
-                    <button id="aiSendBtn" class="ai-send-btn" onclick="sendAIMessage()">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 1.59 2.498C8 14 8 13 8 12.5a4.5 4.5 0 0 1 5.026-4.47zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z"/>
-                        </svg>
-                    </button>
-                </div>
+                                <div class="ai-input-row">
+                                    <input type="text" id="aiInput" class="ai-input" placeholder="Ask me to build something..." onkeydown="if(event.key==='Enter') sendAIMessage()">
+                                    <button id="aiSendBtn" class="ai-send-btn" onclick="sendAIMessage()">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 1.59 2.498C8 14 8 13 8 12.5a4.5 4.5 0 0 1 5.026-4.47zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z"/>
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-
     <?php endif; ?>
 </div>
 
@@ -709,7 +599,6 @@ let stockHpValue = carData.stockHp;
 // --- Drag & Drop ---
 function drag(event) {
     const d = event.target.dataset;
-    // Set all data needed for transfer
     for (let key in d) {
         event.dataTransfer.setData(key, d[key]);
     }
@@ -718,71 +607,62 @@ function drag(event) {
 function allowDrop(event) { event.preventDefault(); event.currentTarget.classList.add('drag-over'); }
 function dragLeave(event) { event.currentTarget.classList.remove('drag-over'); }
 
-    function drop(event) {
-        event.preventDefault();
-        event.currentTarget.classList.remove('drag-over');
+function drop(event) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('drag-over');
 
-        const d = {
-            id: event.dataTransfer.getData("partId"),
-            name: event.dataTransfer.getData("name"),
-            price: parseFloat(event.dataTransfer.getData("price")),
-            hpGain: parseInt(event.dataTransfer.getData("hpGain") || "0"),
-            link: event.dataTransfer.getData("link"),
-            category: event.dataTransfer.getData("category"),
-            engine: event.dataTransfer.getData("engine"),
-            chassis: event.dataTransfer.getData("chassis"),
-            yStart: parseInt(event.dataTransfer.getData("yearStart")),
-            yEnd: parseInt(event.dataTransfer.getData("yearEnd"))
-        };
+    const d = {
+        id: event.dataTransfer.getData("partId"),
+        name: event.dataTransfer.getData("name"),
+        price: parseFloat(event.dataTransfer.getData("price")),
+        hpGain: parseInt(event.dataTransfer.getData("hpGain") || "0"),
+        link: event.dataTransfer.getData("link"),
+        category: event.dataTransfer.getData("category"),
+        engine: event.dataTransfer.getData("engine"),
+        chassis: event.dataTransfer.getData("chassis"),
+        yStart: parseInt(event.dataTransfer.getData("yearStart")),
+        yEnd: parseInt(event.dataTransfer.getData("yearEnd"))
+    };
 
-        // NEW: Check if a part from this category is already in the build
-        if (buildParts.some(p => p.category === d.category)) {
-            alert(`You already have a part from the ${d.category} category in your build. Please remove it first.`);
-            return; // Stop the drop execution
-        }
-
-        // Check compatibility using the helper
-        const isCompatible = checkPartCompatibility(d.engine, d.chassis, d.yStart, d.yEnd);
-
-        const slotMap = { 'Exhaust': 'exhaust', 'Intake': 'intake', 'Suspension': 'suspension', 'Wheels': 'wheels' };
-
-        buildParts.push({ 
-            part_id: d.id, 
-            name: d.name, 
-            price: d.price,
-            hp_gain: d.hpGain || 0,
-            link: d.link,
-            position: slotMap[d.category] || 'general',
-            category: d.category, // NEW: Save the category so we can check it later
-            isCompatible: isCompatible 
-        });
-
-        updateBuildDisplay();
-        filterParts(); // Refresh list to hide added parts
+    if (buildParts.some(p => p.category === d.category)) {
+        alert(`You already have a part from the ${d.category} category in your build. Please remove it first.`);
+        return;
     }
 
-// --- Helper: Check Compatibility ---
-    function checkPartCompatibility(pEngine, pChassis, pStart, pEnd) {
-        // 1. Normalize the data to prevent case/spacing errors
-        const carEng = carData.engine ? carData.engine.trim().toLowerCase() : "";
-        const carChas = carData.chassis ? carData.chassis.trim().toLowerCase() : "";
-        const partEng = pEngine ? pEngine.trim().toLowerCase() : "";
-        const partChas = pChassis ? pChassis.trim().toLowerCase() : "";
+    const isCompatible = checkPartCompatibility(d.engine, d.chassis, d.yStart, d.yEnd);
+    const slotMap = { 'Exhaust': 'exhaust', 'Intake': 'intake', 'Suspension': 'suspension', 'Wheels': 'wheels' };
 
-        // 2. FIXED: If the part has no codes assigned at all, it's universally compatible 
-        // This allows Wheels, Tires, and universal accessories to show up for all cars.
-        if (partEng === "" && partChas === "") {
-            return true; 
-        }
+    buildParts.push({ 
+        part_id: d.id, 
+        name: d.name, 
+        price: d.price,
+        hp_gain: d.hpGain || 0,
+        link: d.link,
+        position: slotMap[d.category] || 'general',
+        category: d.category,
+        isCompatible: isCompatible 
+    });
 
-        // 3. Ensure neither string is empty BEFORE checking if they match
-        const engineMatches = (partEng !== "" && carEng !== "" && partEng === carEng);
-        const chassisMatches = (partChas !== "" && carChas !== "" && partChas === carChas);
+    updateBuildDisplay();
+    filterParts();
+}
 
-        // 4. Return true if either a valid engine OR a valid chassis is a match
-        return engineMatches || chassisMatches;
+function checkPartCompatibility(pEngine, pChassis, pStart, pEnd) {
+    const carEng = carData.engine ? carData.engine.trim().toLowerCase() : "";
+    const carChas = carData.chassis ? carData.chassis.trim().toLowerCase() : "";
+    const partEng = pEngine ? pEngine.trim().toLowerCase() : "";
+    const partChas = pChassis ? pChassis.trim().toLowerCase() : "";
+
+    if (partEng === "" && partChas === "") {
+        return true; 
     }
-// --- UI Updates ---
+
+    const engineMatches = (partEng !== "" && carEng !== "" && partEng === carEng);
+    const chassisMatches = (partChas !== "" && carChas !== "" && partChas === carChas);
+
+    return engineMatches || chassisMatches;
+}
+
 function updateBuildDisplay() {
     const buildPartsDiv = document.getElementById('buildParts');
     const totalPrice = buildParts.reduce((sum, p) => sum + p.price, 0);
@@ -823,7 +703,6 @@ function updateBuildDisplay() {
     }
 
     clearBtn.style.display = buildParts.length > 0 ? 'block' : 'none';
-
     fetchEstimatedHP();
 }
 
@@ -841,12 +720,9 @@ function clearAllParts() {
     }
 }
 
-// --- Filters & Toggles ---
 function toggleCategoryDropdown() {
     const dropdown = document.getElementById('categoryDropdown');
     dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-
-    // Auto-close on outside click
     if (dropdown.style.display === 'block') {
         setTimeout(() => document.addEventListener('click', closeDropdownOnClickOutside), 0);
     }
@@ -874,38 +750,26 @@ function toggleCompatibilityFilter() {
 
 function filterParts() {
     const searchTerm = document.getElementById('searchParts').value.toLowerCase();
-    const usedIds = new Set(buildParts.map(p => p.part_id)); // Used parts are always hidden
+    const usedIds = new Set(buildParts.map(p => p.part_id));
 
     document.querySelectorAll('.part-item').forEach(part => {
         const d = part.dataset;
-
-        // 1. Check if already in build (Always hide)
         if (usedIds.has(d.partId)) {
             part.style.display = 'none';
             return;
         }
-
-        // 2. Check Name Search
         const matchesSearch = d.name.toLowerCase().includes(searchTerm);
-
-        // 3. Check Category
         const matchesCategory = (currentCategory === 'all' || d.category === currentCategory);
-
-        // 4. Check Compatibility (Only if toggle is ON)
         let matchesCompat = true;
         if (showCompatibleOnly) {
             matchesCompat = checkPartCompatibility(d.engine, d.chassis, parseInt(d.yearStart), parseInt(d.yearEnd));
         }
-
-        // Final Visibility Decision
         part.style.display = (matchesSearch && matchesCategory && matchesCompat) ? 'flex' : 'none';
     });
 }
 
-// --- Stock Horsepower ---
 function fetchStockHP() {
     if (!carData.id) return;
-
     const stockEl = document.getElementById('stockHP');
     const spinner = document.getElementById('stockHpSpinner');
 
@@ -942,9 +806,7 @@ function fetchStockHP() {
     });
 }
 
-// --- Estimated Horsepower ---
 let hpDebounceTimer = null;
-
 function fetchEstimatedHP() {
     const carName = "<?= $selected_car ? htmlspecialchars($selected_car['name'], ENT_QUOTES) : ''; ?>";
     if (!carName) return;
@@ -956,11 +818,7 @@ function fetchEstimatedHP() {
 
     if (compatibleParts.length === 0) {
         noteEl.style.display = 'none';
-        if (stockHpValue > 0) {
-            hpEl.textContent = stockHpValue + ' HP';
-        } else {
-            hpEl.textContent = '—';
-        }
+        hpEl.textContent = stockHpValue > 0 ? stockHpValue + ' HP' : '—';
         return;
     }
 
@@ -1002,7 +860,6 @@ function fetchEstimatedHP() {
     }, 800);
 }
 
-// --- Save Modal ---
 function showSaveModal() { 
     if(document.getElementById('saveBuildBtn').disabled) return;
     document.getElementById('saveModal').classList.add('active'); 
@@ -1016,49 +873,44 @@ function prepareBuildData() {
     document.getElementById('saveEstimatedHP').value = isNaN(hpVal) ? '' : hpVal;
 }
 
-// --- Prefill Parts from Fork / Edit ---
-    // --- Prefill Parts from Fork / Edit ---
-    const PREFILL_PARTS = <?= $prefill_parts_json; ?>;
-    if (PREFILL_PARTS && PREFILL_PARTS.length > 0) {
-        PREFILL_PARTS.forEach(prefillPart => {
-            const domPart = document.querySelector(`.part-item[data-part-id="${prefillPart.part_id}"]`);
-            let link = prefillPart.link || '';
-            let category = 'general'; // Default fallback
-            let isCompatible = true;
+const PREFILL_PARTS = <?= $prefill_parts_json; ?>;
+if (PREFILL_PARTS && PREFILL_PARTS.length > 0) {
+    PREFILL_PARTS.forEach(prefillPart => {
+        const domPart = document.querySelector(`.part-item[data-part-id="${prefillPart.part_id}"]`);
+        let link = prefillPart.link || '';
+        let category = 'general';
+        let isCompatible = true;
+        let hpGain = 0;
 
-            let hpGain = 0;
-            if (domPart) {
-                const d = domPart.dataset;
-                link = d.link || link;
-                category = d.category || category; // Grab category from DOM
-                hpGain = parseInt(d.hpGain || "0");
-                isCompatible = checkPartCompatibility(d.engine, d.chassis, parseInt(d.yearStart), parseInt(d.yearEnd));
-            }
+        if (domPart) {
+            const d = domPart.dataset;
+            link = d.link || link;
+            category = d.category || category;
+            hpGain = parseInt(d.hpGain || "0");
+            isCompatible = checkPartCompatibility(d.engine, d.chassis, parseInt(d.yearStart), parseInt(d.yearEnd));
+        }
 
-            buildParts.push({
-                part_id: String(prefillPart.part_id),
-                name: prefillPart.name,
-                price: prefillPart.price,
-                hp_gain: hpGain,
-                link: link,
-                position: prefillPart.position || 'general',
-                category: category, // Save category during prefill
-                isCompatible: isCompatible
-            });
+        buildParts.push({
+            part_id: String(prefillPart.part_id),
+            name: prefillPart.name,
+            price: prefillPart.price,
+            hp_gain: hpGain,
+            link: link,
+            position: prefillPart.position || 'general',
+            category: category,
+            isCompatible: isCompatible
         });
-        updateBuildDisplay();
-        filterParts();
-    }
+    });
+    updateBuildDisplay();
+    filterParts();
+}
 
-// --- Page Init ---
 <?php if ($selected_car): ?>
 fetchStockHP();
 <?php endif; ?>
 
-// ── AI Assistant ──
+// ── AI Assistant Javascript ──
 const AI_PARTS = <?= $ai_parts_json ?? 'null'; ?>;
-
-// Map part_id (as string or number) → part object for fast lookup
 const AI_PARTS_MAP = {};
 if (AI_PARTS) {
     AI_PARTS.forEach(p => { AI_PARTS_MAP[String(p.id)] = p; });
@@ -1099,10 +951,7 @@ async function sendAIMessage() {
     input.disabled = true;
     sendBtn.disabled = true;
 
-    // Show user message
     appendAIMessage('user', escapeHtml(message));
-
-    // Show thinking indicator
     const thinkingRow = appendAIMessage('bot', 'Thinking...', 'ai-msg-thinking');
 
     try {
@@ -1125,24 +974,15 @@ async function sendAIMessage() {
         } else {
             const actions = data.actions || [];
             const applied = applyAIActions(actions);
-
             let html = escapeHtml(data.message);
 
-            // Show action tags
             if (applied.added.length > 0 || applied.removed.length > 0 || applied.skipped.length > 0) {
                 html += '<div class="ai-actions-applied">';
-                applied.added.forEach(name => {
-                    html += '<span class="ai-action-tag added">+ ' + escapeHtml(name) + '</span>';
-                });
-                applied.removed.forEach(name => {
-                    html += '<span class="ai-action-tag removed">− ' + escapeHtml(name) + '</span>';
-                });
-                applied.skipped.forEach(name => {
-                    html += '<span class="ai-action-tag skipped">✕ ' + escapeHtml(name) + ' (incompatible)</span>';
-                });
+                applied.added.forEach(name => { html += '<span class="ai-action-tag added">+ ' + escapeHtml(name) + '</span>'; });
+                applied.removed.forEach(name => { html += '<span class="ai-action-tag removed">− ' + escapeHtml(name) + '</span>'; });
+                applied.skipped.forEach(name => { html += '<span class="ai-action-tag skipped">✕ ' + escapeHtml(name) + ' (incompatible)</span>'; });
                 html += '</div>';
             }
-
             appendAIMessage('bot', html);
         }
     } catch (e) {
@@ -1171,22 +1011,17 @@ function applyAIActions(actions) {
                 buildParts.splice(idx, 1);
             }
         } else if (action.action === 'add') {
-            // Skip if already in build
             if (buildParts.some(p => String(p.part_id) === partId)) return;
 
             const slotMap = { 'Exhaust': 'exhaust', 'Intake': 'intake', 'Suspension': 'suspension', 'Wheels': 'wheels' };
             const isCompatible = checkPartCompatibility(part.engine, part.chassis, part.year_start, part.year_end);
 
-            // Block incompatible parts from being added
             if (!isCompatible) {
                 result.skipped.push(part.name);
                 return;
             }
 
-            // Build a proper link via redirect
-            const link = part.link
-                ? (part.link.match(/^https?:\/\//) ? part.link : 'https://' + part.link)
-                : '';
+            const link = part.link ? (part.link.match(/^https?:\/\//) ? part.link : 'https://' + part.link) : '';
 
             buildParts.push({
                 part_id:      partId,
@@ -1206,7 +1041,6 @@ function applyAIActions(actions) {
         updateBuildDisplay();
         filterParts();
     }
-
     return result;
 }
 
@@ -1218,7 +1052,6 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
-
 </script>
 
 <?php renderFooter(); ?>

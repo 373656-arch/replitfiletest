@@ -456,6 +456,7 @@ function renderFooter() {
             });
 
             // --- NOTIFICATION SYSTEM ---
+            // --- NOTIFICATION SYSTEM ---
             const IS_ADMIN    = <?= $isUserAdmin ? 'true' : 'false' ?>;
             const notifToggle = document.getElementById('notifToggle');
             const notifPanel  = document.getElementById('notifPanel');
@@ -481,10 +482,13 @@ function renderFooter() {
             function markItemRead(item) {
                 if (!item.classList.contains('unread')) return;
                 item.classList.remove('unread');
+
+                // FIXED: Point to the new API and pass clean actions
                 const fd = new FormData();
-                fd.append('ajax_mark_single_notif_read', '1');
+                fd.append('action', 'mark_single_read');
                 fd.append('notif_id', item.dataset.notifId || '0');
-                fetch('/config.php', { method: 'POST', body: fd }).catch(() => {});
+                fetch('/api/notifications.php', { method: 'POST', body: fd }).catch(() => {});
+
                 // Update badge count
                 const remaining = document.querySelectorAll('.notif-item.unread').length;
                 if (notifBadge) {
@@ -529,10 +533,11 @@ function renderFooter() {
                         document.querySelectorAll('.notif-item.unread').forEach(item => {
                             item.classList.remove('unread');
                         });
-                        // Mark all read on server
+
+                        // FIXED: Point to the new API and pass clean actions
                         const fd = new FormData();
-                        fd.append('ajax_mark_notifications_read', '1');
-                        fetch('/config.php', { method: 'POST', body: fd }).catch(() => {});
+                        fd.append('action', 'mark_all_read');
+                        fetch('/api/notifications.php', { method: 'POST', body: fd }).catch(() => {});
                     }
                 });
 
@@ -547,9 +552,11 @@ function renderFooter() {
             if (clearBtn) {
                 clearBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
+
+                    // FIXED: Point to the new API and pass clean actions
                     const fd = new FormData();
-                    fd.append('ajax_clear_all_notifications', '1');
-                    fetch('/config.php', { method: 'POST', body: fd })
+                    fd.append('action', 'clear_all');
+                    fetch('/api/notifications.php', { method: 'POST', body: fd })
                         .then(() => {
                             const body = document.querySelector('.notif-body');
                             if (body) body.innerHTML = '<div class="notif-empty">You\'re all caught up.</div>';
@@ -601,7 +608,10 @@ function renderFooter() {
             ?>;
             let lastReadId = lastKnownId;
 
+            // Only run the poll if the user is actively looking at the website
             function pollNotifications() {
+                if (document.hidden) return; // Skip the DB hit if the tab is backgrounded!
+
                 fetch('/config.php?ajax_poll_notifications=1&since_id=' + lastKnownId)
                     .then(r => r.json())
                     .then(data => {
@@ -614,13 +624,11 @@ function renderFooter() {
                             if (empty) empty.remove();
 
                             newOnes.forEach(n => {
-                                // Skip duplicates already in the DOM
                                 if (document.querySelector('.notif-item[data-notif-id="' + n.id + '"]')) {
                                     if (n.id > lastKnownId) lastKnownId = n.id;
                                     return;
                                 }
                                 const el = buildNotifEl(n);
-                                // Flash-highlight only truly new arrivals
                                 el.classList.add('notif-new-flash');
                                 setTimeout(() => el.classList.remove('notif-new-flash'), 1200);
                                 if (body) body.insertBefore(el, body.firstChild);
@@ -630,11 +638,8 @@ function renderFooter() {
                             applyLocalTimes();
                         }
 
-                        // Only show badge for notifications newer than what the user last read
                         if (addedCount > 0) {
-                            const unreadNew = document.querySelectorAll(
-                                '.notif-item[data-notif-id]'
-                            );
+                            const unreadNew = document.querySelectorAll('.notif-item[data-notif-id]');
                             let newUnread = 0;
                             unreadNew.forEach(item => {
                                 if (parseInt(item.dataset.notifId) > lastReadId) newUnread++;
@@ -653,10 +658,11 @@ function renderFooter() {
                     }).catch(() => {});
             }
 
-            setInterval(pollNotifications, 5000);
-        </script>
-    </body>
-    </html>
-    <?php
-}
-?>
+            // 30 seconds (30000ms) = 120 requests/hour. Well under the 500 limit!
+            setInterval(pollNotifications, 30000);
+</script>
+                </body>
+                </html>
+                <?php
+            }
+            ?>
